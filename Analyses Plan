@@ -1,0 +1,21 @@
+Overall aim: To gain experience in Mendelian randomization by undertaking a one sample Mendelian randomization (MR) study of the causal effect of body mass index (BMI) on Type 2 diabetes mellitus and hypertension in four Sub-Saharan (SSA) countries.
+Specific objectives: 
+Identify potential genetic instruments for BMI using the summary results of the GWAS that has been conducted in the AWI-Gen 1 cohort and European origin GIANT consortia results
+Generate genetic risk scores (GRS) from these two sources that depending on initial analyses might include SSA specific BMI genetic variants, European specific variants, mixed European and SSA variants (i.e. GRS with differing specificity for a SSA population and differing instrument strength
+Examine the association of the different GRS with T2DM (and HT) in the AWI-Gen 1 cohort
+Explore potential violation of MR assumptions / undertake sensitivity analyses.
+Complete Mendelian randomization short course
+Methods
+Objective 1: Selection of potential genetic variants to instrument for BMI
+Ideally we would use a large GWAS of BMI in a SSA population to identify independent genetic variants. In practice, large GWAS in SSA populations are currently rare. We will identify and compare genome-wide significant associations from:
+a. A GWAS of BMI in the AWI-Gen 1 cohort, a cohort of 12,000 participants aged 40-60 years from six SSA centres: three in South Africa (Agincourt, DIMAMO (formerly known as Dikgale), and Soweto), one in East Africa (Nairobi, Kenya), and two in West Africa (Navrongo, Ghana and, Nanoro, Burkina Faso).1 Participants from each study site were recruited between 2013–2017. 
+b. The latest GWAS (2018) of BMI in the GIANT consortia which included ~7,000,000 European ancestry adults identified 941 independent SNPs at p < 1 X 10-8.2  As the AWI-GEN 1 cohort is considerably smaller than the GIANT European ancestry cohort we will extract association data from that cohort with P< 0.05 X 10-5.
+c. Orientate the SNPs so that they are with 'effect' alleles increasing BMI do 0,1,2 for the allele gives the 'dose' of increasing BMI allele
+d. We will compare overlap between the European (GIANT) ancestry and AWI Gen 1 (SSA ancestry) BMI associated SNPs.
+e. We will explore differences in allele frequency and LD structure.
+References
+1.     Ali SA, Soo C, Agongo G, et al. Genomic and environmental risk factors for cardiometabolic diseases in Africa: methods used for Phase 1 of the AWI-Gen population cross-sectional study. Glob Health Action. 2018 Nov 16;11(sup2):1507133. doi:10.1080/16549716.2018.1507133.
+2. 		Yengo L, Sidorenko J, Kemper KE, et al. Meta-analysis of genome-wide association studies for height and body mass index in ∼700000 individuals of European ancestry. Hum Mol Genet. 2018 Oct 15;27(20):3641-3649. doi: 10.1093/hmg/ddy271.
+
+
+

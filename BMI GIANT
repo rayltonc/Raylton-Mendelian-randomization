@@ -1,0 +1,92 @@
+setwd("C:/Users/raylt/Documents/GWAS") 
+
+# Install the necessary Bioconductor packages
+BiocManager::install(c(
+  "BiocGenerics",
+  "Biostrings",
+  "GenomeInfoDb",
+  "GenomicRanges",
+  "IRanges",
+  "Rsamtools",
+  "S4Vectors",
+  "SummarizedExperiment",
+  "VariantAnnotation"
+))
+
+devtools::install_github("MRCIEU/gwasvcf")
+
+#set a location for the bcftools package
+library(gwasvcf)
+set_bcftools('/path/to/bcftools')
+
+#use the bundled binaries in genetics.binaRies.
+suppressWarnings(suppressPackageStartupMessages({
+  library(gwasvcf)
+  library(VariantAnnotation)
+  library(dplyr)
+  library(magrittr)
+}))
+
+#Read data
+vcffile <- system.file("extdata", "data.vcf.gz", package="gwasvcf")
+vcf <- readVcf(vcffile)
+class(vcf)
+vcf
+
+# Locate the extdata directory within the package
+
+package_dir <- "C:/Users/raylt/Documents/GWAS"
+
+extdata_dir <- file.path(package_dir, "extdata")
+print(extdata_dir)
+
+header(vcf)
+samples(header(vcf))
+rowRanges(vcf)
+
+#Converting to simple dataframes
+vcf_to_granges(vcf)
+
+#Create a data frame:
+vcf_to_granges(vcf) %>% dplyr::as_tibble()
+
+# Path to VCF file
+vcf_file_path <- "C:/Users/raylt/Documents/GWAS/ieu-b-40.vcf.gz"
+
+file.exists(vcf_file_path)
+
+# Read the VCF file
+vcf <- readVcf(vcf_file_path, genome = "hg19")
+
+# Extract the header information
+header_info <- header(vcf)
+
+# List all GENO (Genotype) fields
+geno_fields <- geno(header_info)
+
+# Display the names of the GENO fields
+names(geno_fields)
+print(geno_fields)
+
+######Creating the Manhattan Plot
+library(qqman)
+
+# Extract chromosome, position, and significance measure
+chrom <- as.character(seqnames(rowRanges(vcf)))
+pos <- start(rowRanges(vcf))
+pvalue <- info(vcf)$LP  
+
+# Prepare the data frame
+chrom_numeric <- as.numeric(gsub("chr", "", chrom))
+manhattan_data <- data.frame(
+  CHR = chrom_numeric,
+  BP = pos,
+  P = -log10(pvalue)
+)
+
+manhattan_data <- na.omit(manhattan_data)
+
+# Create the Manhattan plot
+manhattan(manhattan_data, chr="CHR", bp="BP", p="P.value", 
+          genomewideline=-log10(5e-8), suggestiveline=-log10(1e-5), 
+          ylim=c(0,10))

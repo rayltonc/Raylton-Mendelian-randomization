@@ -1,4 +1,4 @@
-setwd("C:/Users/raylt/Documents/GWAS") 
+setwd("C:/Users/raylt/Documents/GWAS")
 
 # Install the necessary Bioconductor packages
 BiocManager::install(c(
@@ -18,6 +18,13 @@ devtools::install_github("MRCIEU/gwasvcf")
 #set a location for the bcftools package
 library(gwasvcf)
 set_bcftools('/path/to/bcftools')
+
+#set a location for LD related functions
+set_plink('/path/to/plink')
+
+#unset path
+set_plink(NULL)
+set_bcftools(NULL)
 
 #use the bundled binaries in genetics.binaRies.
 suppressWarnings(suppressPackageStartupMessages({
@@ -74,19 +81,26 @@ library(qqman)
 # Extract chromosome, position, and significance measure
 chrom <- as.character(seqnames(rowRanges(vcf)))
 pos <- start(rowRanges(vcf))
-pvalue <- info(vcf)$LP  
+pvalue <- info(vcf)$AF 
+
+# Extract SNPs (IDs)
+snp_ids <- rownames(vcf)  # SNP identifiers are typically stored in the row names (ID column)
+
 
 # Prepare the data frame
 chrom_numeric <- as.numeric(gsub("chr", "", chrom))
 manhattan_data <- data.frame(
   CHR = chrom_numeric,
   BP = pos,
-  P = -log10(pvalue)
+  SNP = snp_ids,
+  P = pvalue
 )
 
 manhattan_data <- na.omit(manhattan_data)
 
 # Create the Manhattan plot
-manhattan(manhattan_data, chr="CHR", bp="BP", p="P", 
+png ("GIANT2.png")  # Opens a PNG device
+manhattan(manhattan_data, chr="CHR", bp="BP", snp = "SNP", p="P", 
           genomewideline=-log10(5e-8), suggestiveline=-log10(1e-5), 
           ylim=c(0,10))
+dev.off()

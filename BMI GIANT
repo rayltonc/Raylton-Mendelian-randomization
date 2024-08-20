@@ -87,6 +87,6 @@ manhattan_data <- data.frame(
 manhattan_data <- na.omit(manhattan_data)
 
 # Create the Manhattan plot
-manhattan(manhattan_data, chr="CHR", bp="BP", p="P.value", 
+manhattan(manhattan_data, chr="CHR", bp="BP", p="P", 
           genomewideline=-log10(5e-8), suggestiveline=-log10(1e-5), 
           ylim=c(0,10))

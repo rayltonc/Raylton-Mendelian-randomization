@@ -1,0 +1,18 @@
+#path to plink and a bed/bim/fam LD reference dataset
+
+devtools::install_github("explodecomputer/genetics.binaRies")
+genetics.binaRies::get_plink_binary()
+
+#load packages
+install.packages("dplyr")
+install.packages("genetics.binaRies")
+
+library(dplyr)
+library(genetics.binaRies)  
+
+#LD clumping
+ld_clump(
+  dplyr::tibble(ID=vcfLD$ID, pval=vcfLD$P),
+  plink_bin = genetics.binaRies::get_plink_binary(),
+  bfile = "C:/Users/raylt/Documents/GWAS/1kg.v3.tgz"
+)

@@ -26,7 +26,7 @@ formatted_data <- dplyr::tibble(rsid = significant_SNPGIANT2018$ID, pval = signi
 plink_bin_path <- genetics.binaRies::get_plink_binary()
 bfile_path <- "C:/Users/raylt/Documents/GWAS/1kg.v3/AFR" 
 
-plink_bin_path <-"C:/Users/raylt/Documents/GWAS/plink2.exe"
+plink_bin_path <-"C:/Users/raylt/Documents/GWAS/plink.exe"
 file.exists(plink_bin_path)
 system(paste(plink_bin_path, "--version"), intern = TRUE)
 
@@ -36,20 +36,3 @@ clumped_results <- ld_clump(
   bfile = bfile_path
 )
 
-*Error message*
-Using up to 8 compute threads.
-661 samples (0 females, 0 males, 661 ambiguous; 661 founders) loaded from
-C:/Users/raylt/Documents/GWAS/1kg.v3/AFR.fam.
-14806113 variants loaded from C:/Users/raylt/Documents/GWAS/1kg.v3/AFR.bim.
-Note: No phenotype data present.
---clump: 172 clumps formed from 5337 index candidates.  
-Results written to C:\Users\raylt\AppData\Local\Temp\RtmpqAEbjR\file44fc24fd279a.clumps .
-End time: Tue Aug 27 15:16:18 2024
-Warning: 490 top variant IDs in --clump file missing from main dataset.  IDs
-written to
-C:\Users\raylt\AppData\Local\Temp\RtmpqAEbjR\file44fc24fd279a.clumps.missing_id
-.
-Error in file(file, "rt") : cannot open the connection
-In addition: Warning message:
-In file(file, "rt") :
-  cannot open file 'C:\Users\raylt\AppData\Local\Temp\RtmpqAEbjR\file44fc24fd279a.clumped': No such file or directory

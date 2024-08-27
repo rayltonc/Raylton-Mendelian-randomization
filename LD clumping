@@ -24,7 +24,7 @@ formatted_data <- dplyr::tibble(rsid = significant_SNPGIANT2018$ID, pval = signi
 
 # Specify the path to the PLINK binary files
 plink_bin_path <- genetics.binaRies::get_plink_binary()
-bfile_path <- "C:/Users/raylt/Documents/GWAS/1kg.v3/EUR" 
+bfile_path <- "C:/Users/raylt/Documents/GWAS/1kg.v3/AFR" 
 
 plink_bin_path <-"C:/Users/raylt/Documents/GWAS/plink2.exe"
 file.exists(plink_bin_path)

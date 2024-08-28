@@ -63,7 +63,7 @@ manhattan(
   snp = "rsid",
   p = "pval",
   ylim = c(0, 150),
-  col = c("skyblue3", "darkorchid1", "yellowgreen", "tomato2", "deepskyblue2", "orangered3"),  # New custom colors
+  col = c("skyblue3", "darkorchid1", "yellowgreen", "tomato2", "deepskyblue2", "orangered3"), 
   genomewideline = FALSE,  
   suggestiveline = FALSE,  
   cex = 0.8,               

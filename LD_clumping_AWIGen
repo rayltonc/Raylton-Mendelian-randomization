@@ -1,0 +1,74 @@
+orientate_snps <- function(df) {
+  df <- df %>%
+    mutate(
+      # Identify SNPs with negative beta effect estimates
+      Flip = BETA < 0,
+      
+      # Flip the beta effect estimate to positive if needed
+      BETA = ifelse(Flip, -BETA, BETA),
+      
+      # Swap effect and alternate alleles if needed
+      TempAllele = ifelse(Flip, ALLELE1, NA),
+      ALLELE1 = ifelse(Flip, ALLELE0, ALLELE1),
+      ALLELE0 = ifelse(Flip, TempAllele, ALLELE0),
+      
+      # Recalculate allele frequency
+      A1FREQ = ifelse(Flip, 1 - A1FREQ, A1FREQ)
+    ) %>%
+    select(-Flip, -TempAllele) # Remove temporary columns used for calculations
+  
+  return(df)
+}
+
+# Apply the function to data frame
+AWIGen_oriented <- orientate_snps (AWIGen)
+
+# Define the significance threshold
+threshold1 <- 5e-6
+
+# Filter for significant p-values
+significant_resultsAWIGen <- AWIGen_oriented[AWIGen_oriented$P_BOLT_LMM < threshold1, ]
+
+# Convert data to a tibble and create rsid & pval labels
+significant_resultsAWIGen <- as_tibble(significant_resultsAWIGen)
+
+# Creating a tibble with necessary columns for a Manhattan plot
+formatted_AWIGen <- tibble(
+  rsid = significant_resultsAWIGen$SNP,        
+  chr = significant_resultsAWIGen$CHR,        
+  bp = significant_resultsAWIGen$BP,          
+  pval = significant_resultsAWIGen$P_BOLT_LMM,         
+)
+
+# Specify the path to the PLINK binary files
+plink_bin_path <- genetics.binaRies::get_plink_binary()
+bfile_path <- "C:/Users/raylt/Documents/GWAS/1kg.v3/AFR" 
+
+plink_bin_path <-"C:/Users/raylt/Documents/GWAS/plink.exe"
+file.exists(plink_bin_path)
+system(paste(plink_bin_path, "--version"), intern = TRUE)
+
+clumped_AWIGenresults <- ld_clump(
+  dat = formatted_AWIGen,
+  plink_bin = plink_bin_path,
+  bfile = bfile_path
+)
+
+# Manhattan plot
+pdf("LD_AWIGen.pdf", width=12, height=6)  # Width and height are in inches
+manhattan(
+  clumped_AWIGenresults,
+  chr = "chr",
+  bp = "bp",
+  snp = "rsid",
+  p = "pval",
+  ylim = c(0, 150),
+  col = c("skyblue3", "darkorchid1", "yellowgreen", "tomato2", "deepskyblue2", "orangered3"),  # New custom colors
+  genomewideline = FALSE,  
+  suggestiveline = FALSE,  
+  cex = 0.8,               
+  cex.axis = 0.9,         
+  lwd = 2                  
+)
+mtext("AWIGen", side = 3, line = 1, cex = 1.2)
+dev.off()

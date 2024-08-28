@@ -1,0 +1,111 @@
+#path to plink and a bed/bim/fam LD reference dataset
+
+devtools::install_github("explodecomputer/genetics.binaRies")
+genetics.binaRies::get_plink_binary()
+
+#load packages
+install.packages("dplyr")
+install.packages("genetics.binaRies")
+
+library(dplyr)
+library(genetics.binaRies)  
+
+# orientate SNPs
+vcf %>%
+  mutate(
+    # Identify SNPs with negative beta effect estimates
+    Flip = ES < 0,
+    
+    # Flip the beta effect estimate to positive if needed
+    ES = ifelse(Flip, -ES, ES),
+    
+    # Swap effect and alternate alleles if needed
+    TempAllele = ifelse(Flip, REF, NA),
+    REF = ifelse(Flip, ALT, REF),
+    ALT = ifelse(Flip, TempAllele, ALT),
+    
+    # Recalculate allele frequency
+    AF = ifelse(Flip, 1 - AF, AF)
+  ) %>%
+  select(-Flip, -TempAllele) # Remove temporary columns used for calculations
+
+# Define the significance threshold
+threshold <- 5e-8
+
+# Filter for significant p-values
+significant_SNPGIANT2018 <- vcf[vcf$P < threshold, ]
+
+#LD clumping 
+remotes::install_github("mrcieu/ieugwasr")
+
+library(ieugwasr)
+
+# Extract the .tgz file
+untar("C:/Users/raylt/Documents/GWAS/1kg.v3.tgz", exdir = "C:/Users/raylt/Documents/GWAS/1kg.v3")
+
+# Convert data to a tibble and create rsid & pval labels
+significant_SNPGIANT2018 <- as_tibble(significant_SNPGIANT2018)
+formatted_data <- dplyr::tibble(rsid = significant_SNPGIANT2018$ID, pval = significant_SNPGIANT2018$P)
+
+# Specify the path to the PLINK binary files
+plink_bin_path <- genetics.binaRies::get_plink_binary()
+bfile_path <- "C:/Users/raylt/Documents/GWAS/1kg.v3/AFR" 
+
+plink_bin_path <-"C:/Users/raylt/Documents/GWAS/plink.exe"
+file.exists(plink_bin_path)
+system(paste(plink_bin_path, "--version"), intern = TRUE)
+
+clumped_results <- ld_clump(
+  dat = formatted_data,
+  plink_bin = plink_bin_path,
+  bfile = bfile_path
+)
+
+# Extract the .tgz file
+untar("C:/Users/raylt/Documents/GWAS/1kg.v3.tgz", exdir = "C:/Users/raylt/Documents/GWAS/1kg.v3")
+
+# Convert data to a tibble and create rsid & pval labels
+significant_SNPGIANT2018 <- as_tibble(significant_SNPGIANT2018)
+
+# Create a tibble with necessary columns for a Manhattan plot
+formatted_data <- tibble(
+  rsid = significant_SNPGIANT2018$ID,        
+  chr = significant_SNPGIANT2018$seqnames,      
+  bp = significant_SNPGIANT2018$start,          
+  pval = significant_SNPGIANT2018$P,         
+)
+
+# Specify the path to the PLINK binary files
+plink_bin_path <- genetics.binaRies::get_plink_binary()
+bfile_path <- "C:/Users/raylt/Documents/GWAS/1kg.v3/AFR" 
+
+plink_bin_path <-"C:/Users/raylt/Documents/GWAS/plink.exe"
+file.exists(plink_bin_path)
+system(paste(plink_bin_path, "--version"), intern = TRUE)
+
+clumped_results <- ld_clump(
+  dat = formatted_data,
+  plink_bin = plink_bin_path,
+  bfile = bfile_path
+
+# Load necessary libraries
+library(qqman)
+
+# Manhattan plot
+pdf("LD GIANT2018.pdf", width=12, height=6)
+manhattan(
+  clumped_results,
+  chr = "chr",
+  bp = "bp",
+  snp = "rsid",
+  p = "pval",
+  ylim = c(0, 150),
+  col = c("dodgerblue2", "darkorange2", "mediumseagreen", "firebrick2"),  # Custom colors
+  genomewideline = FALSE,  # Disable the genome-wide significance line
+  suggestiveline = FALSE,  # Disable the suggestive significance line
+  cex = 0.8,          # Increase the size of the points
+  cex.axis = 0.9,     # Increase the size of the axis labels
+  lwd = 2             # Slightly increase the thickness of the points
+)
+title(main = "LD_GIANT 2018")
+dev.off()

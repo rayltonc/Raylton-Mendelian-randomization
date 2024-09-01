@@ -58,7 +58,7 @@ system(paste(plink_bin_path, "--version"), intern = TRUE)
 clumped_results <- ld_clump(
   dat = formatted_data,
   plink_bin = plink_bin_path,
-  bfile = bfile_path
+  bfile = bfile_path, pop=AFR
 )
 
 # Extract the .tgz file

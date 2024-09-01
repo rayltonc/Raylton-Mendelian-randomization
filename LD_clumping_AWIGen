@@ -51,7 +51,7 @@ system(paste(plink_bin_path, "--version"), intern = TRUE)
 clumped_AWIGenresults <- ld_clump(
   dat = formatted_AWIGen,
   plink_bin = plink_bin_path,
-  bfile = bfile_path
+  bfile = bfile_path, pop = "AFR"
 )
 
 # Manhattan plot

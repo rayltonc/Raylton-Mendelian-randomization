@@ -48,6 +48,22 @@ plink_bin_path <-"C:/Users/raylt/Documents/GWAS/plink.exe"
 file.exists(plink_bin_path)
 system(paste(plink_bin_path, "--version"), intern = TRUE)
 
+####Adjusting Column Names
+formatted_data_AWIGen <- dplyr::tibble(
+  rsid = significant_resultsAWIGen$SNP,
+  pval = significant_resultsAWIGen$P_BOLT_LMM,
+  effect_size = significant_resultsAWIGen$BETA,
+  std_error = significant_resultsAWIGen$SE,  
+  ref_allele = significant_resultsAWIGen$ALLELE1,
+  other_allele = significant_resultsAWIGen$ALLELE0
+)
+
+clumped_AWIGenresults <- ld_clump(
+  dat = formatted_data_AWIGen,
+  plink_bin = plink_bin_path,
+  bfile = bfile_path, pop = "AFR"
+)
+
 clumped_AWIGenresults <- ld_clump(
   dat = formatted_AWIGen,
   plink_bin = plink_bin_path,

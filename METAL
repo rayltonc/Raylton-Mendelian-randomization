@@ -1,0 +1,134 @@
+##Download METAL (Linux version)
+https://csg.sph.umich.edu/abecasis/Metal/download/
+
+##Unzip file using Ubuntu
+cd /mnt
+/mnt$ cd c
+/mnt/c$ cd Documents\ and\ Settings
+/mnt/c/Documents and Settings$ cd raylt
+/mnt/c/Documents and Settings/raylt$ cd Documents
+/mnt/c/Documents and Settings/raylt/Documents$ cd GWAS/
+/mnt/c/Documents and Settings/raylt/Documents/GWAS$ gunzip Linux-metal.tar.gz
+
+##Extract file
+/mnt/c/Documents and Settings/raylt/Documents/GWAS$ tar -xvf metal.tar
+
+#Make the METAL Binary Executable:
+/mnt/c/Documents and Settings/raylt/Documents/GWAS$ tar -tf metal.tar
+
+#binary is inside a folder named generic-metal after extracting/ open folder
+/mnt/c/Documents and Settings/raylt/Documents/GWAS$ cd generic-metal
+/mnt/c/Documents and Settings/raylt/Documents/GWAS/generic-metal$ ls -l
+
+#Make the Binary Executable
+/mnt/c/Documents and Settings/raylt/Documents/GWAS/generic-metal$ chmod +x metal
+
+#Verify and Run the Binary
+/mnt/c/Documents and Settings/raylt/Documents/GWAS/generic-metal$ ./metal
+
+####On R
+library(dplyr)
+
+###AWIGen
+###AWIGen
+####Adjusting Column Names
+formatted_data_AWIGen <- dplyr::tibble(
+  rsid = significant_resultsAWIGen$SNP,
+  pval = significant_resultsAWIGen$P_BOLT_LMM,
+  effect_size = significant_resultsAWIGen$BETA,
+  std_error = significant_resultsAWIGen$SE,  
+  ref_allele = significant_resultsAWIGen$ALLELE1,
+  other_allele = significant_resultsAWIGen$ALLELE0
+)
+
+clumped_AWIGenresults <- ld_clump(
+  dat = formatted_data_AWIGen,
+  plink_bin = plink_bin_path,
+  bfile = bfile_path, pop = "AFR"
+)
+
+
+METAL_AWIGen <- clumped_AWIGenresults %>%
+  rename(
+    MARKER = rsid,
+    ALLELE = ref_allele,
+    EFFECT = effect_size,
+    PVALUE = pval,
+    STDERR = std_error,
+    NONREFALLELE = other_allele
+  ) %>%
+  # Calculate Variance and Weight
+  mutate(
+    VARIANCE = STDERR^2,  # Calculate variance
+    WEIGHT = 1 / VARIANCE # Calculate weight
+  )
+
+head (METAL_AWIGen)
+
+#####Save the Data File
+write.table(METAL_AWIGen, file = "METAL_AWIGen.txt", 
+            sep = "\t", row.names = FALSE, quote = FALSE)
+
+###GIANT
+# Create tibble with additional columns
+formatted_data_GIANT <- dplyr::tibble(
+  rsid = significant_SNPGIANT2018$ID,
+  pval = significant_SNPGIANT2018$P,
+  effect_size = significant_SNPGIANT2018$ES,
+  std_error = significant_SNPGIANT2018$SE,  
+  ref_allele = significant_SNPGIANT2018$REF,
+  other_allele = significant_SNPGIANT2018$ALT
+)
+
+clumped_results_GIANT <- ld_clump(
+  dat = formatted_data_GIANT,
+  plink_bin = plink_bin_path,
+  bfile = bfile_path, pop = "AFR"
+)
+
+METAL_GIANT <- clumped_results_GIANT %>%
+  rename(
+    MARKER = rsid,
+    ALLELE = ref_allele,
+    EFFECT = effect_size,
+    PVALUE = pval,
+    STDERR = std_error,
+    NONREFALLELE = other_allele
+  ) %>%
+  # Calculate Variance and Weight
+  mutate(
+    VARIANCE = STDERR^2,  # Calculate variance
+    WEIGHT = 1 / VARIANCE # Calculate weight
+  )
+
+head (METAL_GIANT)
+
+#####Save the Data File
+write.table(METAL_GIANT, file = "METAL_GIANT.txt", 
+            sep = "\t", row.names = FALSE, quote = FALSE)
+
+####Performing meta-analysis between GIANT and AWIGen using METAL######effect size estimates and standard errors
+
+SCHEME STDERR
+
+MARKER SNP ###Set marker header to SNP
+ALLELE A1 A2 #### Set allele headers to A1 and A2
+EFFECT B ##### Set effect header to B
+STDERR SE ## Set standard error header to SE
+WEIGHT W  ## Set weight header to W
+
+# Input files
+INPUT METAL_GIANT.txt
+
+
+INPUT /Users/raylt/Documents/GWAS/METAL_GIANT.txt
+C:\Users\raylt\Documents\GWAS
+
+
+INPUT METAL_AWIGen.txt
+
+
+
+
+
+            

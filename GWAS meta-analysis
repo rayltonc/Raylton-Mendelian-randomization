@@ -57,6 +57,23 @@ PROCESS METAL_AWIGen.txt
 
 ANALYZE HETEROGENEITY
 
+##Read results
+setwd("C:/Users/raylt/Documents/GWAS/generic-metal")
+
+file_path <- "METAANALYSIS1.TBL"
+
+file_contents <- readLines(file_path)
+
+head(file_contents, n = 10)
+
+# Attempt to read the file as a table (assuming tab-separated values)
+info_df <- read.table(file_path, header = TRUE, sep = "\t", stringsAsFactors = FALSE)
+
+# View the data frame structure
+str(info_df)
+
+# View the first few rows
+head(info_df)
 
 
             

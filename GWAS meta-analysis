@@ -1,0 +1,62 @@
+##AWIGen
+METAL_AWIGen <- clumped_AWIGenresults %>%
+  rename(
+    SNP = rsid,
+    REF_ALLELE = ref_allele,     
+    OTHER_ALLELE = other_allele, 
+    BETA = effect_size,
+    PVALUE = pval,
+    SE = std_error
+  ) %>%
+  # Calculate Variance and Weight
+  mutate(
+    VARIANCE = SE^2,   # Calculate variance
+    W = 1 / VARIANCE,  # Calculate weight
+    N = 10775         # Add sample size column
+  )
+
+head (METAL_AWIGen)
+
+#####Save the Data File
+write.table(METAL_AWIGen, file = "METAL_AWIGen.txt", 
+            sep = "\t", row.names = FALSE, quote = FALSE)
+
+###GIANT
+METAL_GIANT <- clumped_results_GIANT %>%
+  rename(
+    SNP = rsid,
+    REF_ALLELE = ref_allele,     
+    OTHER_ALLELE = other_allele, 
+    BETA = effect_size,
+    PVALUE = pval,
+    SE = std_error
+  ) %>%
+  # Calculate Variance and Weight
+  mutate(
+    VARIANCE = SE^2,   # Calculate variance
+    W = 1 / VARIANCE,  # Calculate weight
+    N = 681275         # Add sample size column
+  )
+
+head (METAL_GIANT)
+
+#####Save the Data File
+write.table(METAL_GIANT, file = "METAL_GIANT.txt", 
+            sep = "\t", row.names = FALSE, quote = FALSE)
+
+####Performing meta-analysis between GIANT and AWIGen using METAL######effect size estimates and standard errors
+
+MARKER SNP
+ALLELE REF_ALLELE OTHER_ALLELE
+EFFECT BETA
+PVALUE PVALUE
+WEIGHT N
+
+PROCESS METAL_GIANT.txt
+PROCESS METAL_AWIGen.txt
+
+
+
+
+
+            

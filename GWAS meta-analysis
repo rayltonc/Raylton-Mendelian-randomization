@@ -44,7 +44,7 @@ head (METAL_GIANT)
 write.table(METAL_GIANT, file = "METAL_GIANT.txt", 
             sep = "\t", row.names = FALSE, quote = FALSE)
 
-####Performing meta-analysis between GIANT and AWIGen using METAL######effect size estimates and standard errors
+####Performing meta-analysis between GIANT and AWIGen using METAL######p values and sample size
 
 MARKER SNP
 ALLELE REF_ALLELE OTHER_ALLELE
@@ -55,7 +55,7 @@ WEIGHT N
 PROCESS METAL_GIANT.txt
 PROCESS METAL_AWIGen.txt
 
-
+ANALYZE HETEROGENEITY
 
 
 

@@ -10,9 +10,6 @@ cd /mnt
 /mnt/c/Documents and Settings/raylt/Documents$ cd GWAS/
 /mnt/c/Documents and Settings/raylt/Documents/GWAS$ gunzip Linux-metal.tar.gz
 
-##Extract file
-/mnt/c/Documents and Settings/raylt/Documents/GWAS$ tar -xvf metal.tar
-
 #Make the METAL Binary Executable:
 /mnt/c/Documents and Settings/raylt/Documents/GWAS$ tar -tf metal.tar
 
@@ -111,21 +108,15 @@ write.table(METAL_GIANT, file = "METAL_GIANT.txt",
 
 SCHEME STDERR
 
-MARKER SNP ###Set marker header to SNP
-ALLELE A1 A2 #### Set allele headers to A1 and A2
-EFFECT B ##### Set effect header to B
-STDERR SE ## Set standard error header to SE
-WEIGHT W  ## Set weight header to W
+MARKER SNP 
+ALLELE A1 A2
+EFFECT B 
+STDERR SE 
+WEIGHT W  
 
 # Input files
 INPUT METAL_GIANT.txt
 
-
-INPUT /Users/raylt/Documents/GWAS/METAL_GIANT.txt
-C:\Users\raylt\Documents\GWAS
-
-
-INPUT METAL_AWIGen.txt
 
 
 

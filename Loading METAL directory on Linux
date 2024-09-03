@@ -1,0 +1,24 @@
+##Download METAL (Linux version)
+https://csg.sph.umich.edu/abecasis/Metal/download/
+
+##Unzip file using Ubuntu
+cd /mnt
+/mnt$ cd c
+/mnt/c$ cd Documents\ and\ Settings
+/mnt/c/Documents and Settings$ cd raylt
+/mnt/c/Documents and Settings/raylt$ cd Documents
+/mnt/c/Documents and Settings/raylt/Documents$ cd GWAS/
+/mnt/c/Documents and Settings/raylt/Documents/GWAS$ gunzip Linux-metal.tar.gz
+
+#Make the METAL Binary Executable:
+/mnt/c/Documents and Settings/raylt/Documents/GWAS$ tar -tf metal.tar
+
+#binary is inside a folder named generic-metal after extracting/ open folder
+/mnt/c/Documents and Settings/raylt/Documents/GWAS$ cd generic-metal
+/mnt/c/Documents and Settings/raylt/Documents/GWAS/generic-metal$ ls -l
+
+#Make the Binary Executable
+/mnt/c/Documents and Settings/raylt/Documents/GWAS/generic-metal$ chmod +x metal
+
+#Verify and Run the Binary
+/mnt/c/Documents and Settings/raylt/Documents/GWAS/generic-metal$ ./metal

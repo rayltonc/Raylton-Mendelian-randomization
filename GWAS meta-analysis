@@ -4,14 +4,12 @@ METAL_AWIGen <- clumped_AWIGenresults %>%
     SNP = rsid,
     REF_ALLELE = ref_allele,     
     OTHER_ALLELE = other_allele, 
-    EFFECT = effect_size,
+    BETA = effect_size,
     PVALUE = pval,
     SE = std_error
   ) %>%
   # Calculate Variance and Weight
   mutate(
-    VARIANCE = SE^2,   # Calculate variance
-    W = 1 / VARIANCE,  # Calculate weight
     N = 10775         # Add sample size column
   )
 
@@ -27,14 +25,12 @@ METAL_GIANT <- clumped_results_GIANT %>%
     SNP = rsid,
     REF_ALLELE = ref_allele,     
     OTHER_ALLELE = other_allele, 
-    EFFECT = effect_size,
+    BETA = effect_size,
     PVALUE = pval,
     SE = std_error
   ) %>%
   # Calculate Variance and Weight
   mutate(
-    VARIANCE = SE^2,   # Calculate variance
-    W = 1 / VARIANCE,  # Calculate weight
     N = 681275         # Add sample size column
   )
 
@@ -43,6 +39,20 @@ head (METAL_GIANT)
 #####Save the Data File
 write.table(METAL_GIANT, file = "METAL_GIANT.txt", 
             sep = "\t", row.names = FALSE, quote = FALSE)
+
+###standardising p-values
+
+# Load datasets
+dataset1 <- read.table("METAL_GIANT.txt", header = TRUE)
+dataset2 <- read.table("METAL_AWIGen.txt", header = TRUE)
+
+# Convert p-values to scientific notation with consistent formatting
+dataset1$PVALUE <- formatC(dataset1$PVALUE, format = "e", digits = 10)
+dataset2$PVALUE <- formatC(dataset2$PVALUE, format = "e", digits = 10)
+
+# Save the standardized datasets
+write.table(dataset1, "METAL_GIANT_standardized.txt", row.names = FALSE, quote = FALSE)
+write.table(dataset2, "METAL_AWIGen_standardized.txt", row.names = FALSE, quote = FALSE)
 
 ####Performing meta-analysis between GIANT and AWIGen using METAL######p values and sample size
 
@@ -126,7 +136,7 @@ info_df2 <- read.table(file_path2, header = TRUE, sep = "\t", stringsAsFactors =
 head(info_df2)
 
 # Export the data frame to a CSV file
-output_file_path <- "HETEROGENEITY1.csv"
+output_file_path <- "HETEROGENEITY.csv"
 write.csv(info_df2, file = output_file_path, row.names = FALSE)
 
 

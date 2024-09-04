@@ -4,7 +4,7 @@ METAL_AWIGen <- clumped_AWIGenresults %>%
     SNP = rsid,
     REF_ALLELE = ref_allele,     
     OTHER_ALLELE = other_allele, 
-    BETA = effect_size,
+    EFFECT = effect_size,
     PVALUE = pval,
     SE = std_error
   ) %>%
@@ -27,7 +27,7 @@ METAL_GIANT <- clumped_results_GIANT %>%
     SNP = rsid,
     REF_ALLELE = ref_allele,     
     OTHER_ALLELE = other_allele, 
-    BETA = effect_size,
+    EFFECT = effect_size,
     PVALUE = pval,
     SE = std_error
   ) %>%
@@ -48,19 +48,22 @@ write.table(METAL_GIANT, file = "METAL_GIANT.txt",
 
 MARKER SNP
 ALLELE REF_ALLELE OTHER_ALLELE
-EFFECT BETA
+EFFECT EFFECT1
 PVALUE PVALUE
 WEIGHT N
 
 PROCESS METAL_GIANT.txt
 PROCESS METAL_AWIGen.txt
 
+OUTFILE METAANALYSIS_METAL_AWIGen_standardized.txt-METAL_GIANT_standardized.txt_ .tbl
+ANALYZE
+
 ANALYZE HETEROGENEITY
 
-##Read results
+## In R Read results
 setwd("C:/Users/raylt/Documents/GWAS/generic-metal")
 
-file_path <- "METAANALYSIS1.TBL"
+file_path <- "METAANALYSIS_METAL_AWIGen_standardized.txt-METAL_GIANT_standardized.txt_ .tbl"
 
 file_contents <- readLines(file_path)
 
@@ -74,6 +77,57 @@ str(info_df)
 
 # View the first few rows
 head(info_df)
+
+file_contents <- readLines(file_path)
+
+head(file_contents, n = 10)
+
+# Read the file as a table
+info_df <- read.table(file_path, header = TRUE, sep = "\t", stringsAsFactors = FALSE)
+
+# View the data frame structure
+str(info_df)
+
+# View the first few rows
+head(info_df)
+
+
+# renaming columns
+# Trim spaces and then rename Markername and P.value columns
+colnames(info_df) <- trimws(colnames(info_df))
+colnames(info_df)[colnames(info_df) == 'MarkerName'] <- 'rsid'
+
+colnames(info_df) <- trimws(colnames(info_df))
+colnames(info_df)[colnames(info_df) == 'P.value'] <- 'pval'
+
+
+#LD clumping
+clumped_results_info_df <- ld_clump(
+  dat = info_df,
+  plink_bin = plink_bin_path,
+  bfile = bfile_path, pop = "AFR"
+)
+
+# Export the data frame to a CSV file
+output_file_path <- "METAANALYSIS.LD_SNPS.csv"
+write.csv(clumped_results_info_df, file = output_file_path, row.names = FALSE)
+
+##Heterogeneity
+file_path2 <- "METAANALYSIS_METAL_AWIGen_standardized.txt-METAL_GIANT_standardized.txt_2.tbl"
+
+file_contents2 <- readLines(file_path2)
+
+head(file_contents2, n = 10)
+
+# Read the file as a table
+info_df2 <- read.table(file_path2, header = TRUE, sep = "\t", stringsAsFactors = FALSE)
+
+# View the first few rows
+head(info_df2)
+
+# Export the data frame to a CSV file
+output_file_path <- "HETEROGENEITY1.csv"
+write.csv(info_df2, file = output_file_path, row.names = FALSE)
 
 
             

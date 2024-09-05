@@ -123,21 +123,45 @@ output_file_path <- "METAANALYSIS.LD_SNPS.csv"
 write.csv(clumped_results_info_df, file = output_file_path, row.names = FALSE)
 
 ##Heterogeneity
-file_path2 <- "METAANALYSIS_METAL_AWIGen_standardized.txt-METAL_GIANT_standardized.txt_2.tbl"
+# Define the fixed effects meta-analysis function
+fixed_effects_meta_analysis <- function(beta_vec, se_vec) 
+  {
+  w <- 1 / se_vec^2  # Calculate weights
+  beta <- sum(beta_vec * w) / sum(w)  # Calculate meta-analysis beta
+  se <- sqrt(1 / sum(w))  # Calculate standard error of the combined beta
+  pval <- pnorm(abs(beta / se), lower.tail = FALSE)  # Calculate p-value for combined beta
+  Qj <- w * (beta - beta_vec)^2  # Calculate Cochran's Q for each study
+  Q <- sum(Qj)  # Total Q statistic
+  Qdf <- length(beta_vec) - 1  # Degrees of freedom for Q statistic
+  Qjpval <- pchisq(Qj, 1, lower.tail = FALSE)  # Per-study heterogeneity p-values
+  Qpval <- pchisq(Q, Qdf, lower.tail = FALSE)  # Cochran's Q p-value
+  return(list(beta = beta, se = se, Qpval = Qpval, Qj = Qj, Qjpval = Qjpval))
+}
 
-file_contents2 <- readLines(file_path2)
+# Define the heterogeneity test function
+heterogeneity_test <- function(sslist) {
+  # Extract betas and standard errors for each population
+  b <- lapply(sslist, \(x) x$bhat) %>% bind_cols
+  se <- lapply(sslist, \(x) x$se) %>% bind_cols
+  
+  # Apply fixed effects meta-analysis to each SNP
+  o <- lapply(1:nrow(b), \(i) {
+    fixed_effects_meta_analysis(as.numeric(b[i,]), as.numeric(se[i,]))
+  })
+  
+  # Create output tables for Cochran's Q and per-population heterogeneity p-values
+  Q <- tibble(snp = sslist[[1]]$snp, Qpval = sapply(o, \(x) x$Qpval))
+  Qj <- lapply(o, \(x) x$Qjpval) %>% do.call(rbind, .) %>% 
+    as_tibble() %>%
+    rename(setNames(paste0("V", 1:length(sslist)), names(sslist))) %>%
+    mutate(snp = sslist[[1]]$snp)
+  
+  return(list(Q = Q, Qj = Qj))
+}
 
-head(file_contents2, n = 10)
+# Find common SNPs
+common_snps <- intersect(clumped_AWIGenresults$snp, clumped_GIANTresults$snp)
 
-# Read the file as a table
-info_df2 <- read.table(file_path2, header = TRUE, sep = "\t", stringsAsFactors = FALSE)
-
-# View the first few rows
-head(info_df2)
-
-# Export the data frame to a CSV file
-output_file_path <- "HETEROGENEITY.csv"
-write.csv(info_df2, file = output_file_path, row.names = FALSE)
 
 
             

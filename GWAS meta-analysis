@@ -1,16 +1,13 @@
 ##AWIGen
+
 METAL_AWIGen <- clumped_AWIGenresults %>%
   rename(
     SNP = rsid,
-    REF_ALLELE = ref_allele,     
-    OTHER_ALLELE = other_allele, 
-    BETA = effect_size,
+    REF_ALLELE = REF,     
+    OTHER_ALLELE = ALT, 
+    BETA = bhat,
     PVALUE = pval,
-    SE = std_error
-  ) %>%
-  # Calculate Variance and Weight
-  mutate(
-    N = 10775         # Add sample size column
+    STDERR = se
   )
 
 head (METAL_AWIGen)
@@ -20,18 +17,14 @@ write.table(METAL_AWIGen, file = "METAL_AWIGen.txt",
             sep = "\t", row.names = FALSE, quote = FALSE)
 
 ###GIANT
-METAL_GIANT <- clumped_results_GIANT %>%
+METAL_GIANT <- clumped_GIANTresults%>%
   rename(
     SNP = rsid,
-    REF_ALLELE = ref_allele,     
-    OTHER_ALLELE = other_allele, 
-    BETA = effect_size,
+    REF_ALLELE = REF,     
+    OTHER_ALLELE = ALT, 
+    BETA = bhat,
     PVALUE = pval,
-    SE = std_error
-  ) %>%
-  # Calculate Variance and Weight
-  mutate(
-    N = 681275         # Add sample size column
+    STDERR = se
   )
 
 head (METAL_GIANT)
@@ -55,7 +48,7 @@ write.table(dataset1, "METAL_GIANT_standardized.txt", row.names = FALSE, quote =
 write.table(dataset2, "METAL_AWIGen_standardized.txt", row.names = FALSE, quote = FALSE)
 
 ####Performing meta-analysis between GIANT and AWIGen using METAL######p values and sample size
-
+SCHEME SAMPLESIZE
 MARKER SNP
 ALLELE REF_ALLELE OTHER_ALLELE
 EFFECT EFFECT1
@@ -63,9 +56,16 @@ PVALUE PVALUE
 WEIGHT N
 
 PROCESS METAL_GIANT.txt
+
+SCHEME SAMPLESIZE
+MARKER SNP
+ALLELE REF_ALLELE OTHER_ALLELE
+EFFECT EFFECT1
+PVALUE PVALUE
+WEIGHT N
 PROCESS METAL_AWIGen.txt
 
-OUTFILE METAANALYSIS_METAL_AWIGen_standardized.txt-METAL_GIANT_standardized.txt_ .tbl
+OUTFILE METAANALYSIS_METAL_AWIGen_standardized.txt-METAL_GIANT_standardized.txt.tbl
 ANALYZE
 
 ANALYZE HETEROGENEITY
@@ -73,13 +73,13 @@ ANALYZE HETEROGENEITY
 ## In R Read results
 setwd("C:/Users/raylt/Documents/GWAS/generic-metal")
 
-file_path <- "METAANALYSIS_METAL_AWIGen_standardized.txt-METAL_GIANT_standardized.txt_ .tbl"
+file_path <- "METAANALYSIS_METAL_AWIGen_GIANT_standardized_2.tbl"
 
 file_contents <- readLines(file_path)
 
 head(file_contents, n = 10)
 
-# Attempt to read the file as a table (assuming tab-separated values)
+# Read file
 info_df <- read.table(file_path, header = TRUE, sep = "\t", stringsAsFactors = FALSE)
 
 # View the data frame structure

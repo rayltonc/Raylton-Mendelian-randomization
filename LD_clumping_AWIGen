@@ -32,13 +32,19 @@ significant_resultsAWIGen <- AWIGen_oriented[AWIGen_oriented$P_BOLT_LMM < thresh
 # Convert data to a tibble and create rsid & pval labels
 significant_resultsAWIGen <- as_tibble(significant_resultsAWIGen)
 
-# Creating a tibble with necessary columns for a Manhattan plot
-formatted_AWIGen <- tibble(
-  rsid = significant_resultsAWIGen$SNP,        
-  chr = significant_resultsAWIGen$CHR,        
-  bp = significant_resultsAWIGen$BP,          
-  pval = significant_resultsAWIGen$P_BOLT_LMM,         
-)
+formatted_data_AWIGen <- dplyr::tibble(
+  rsid = significant_resultsAWIGen$SNP,
+  pval = significant_resultsAWIGen$P_BOLT_LMM,
+  bhat = significant_resultsAWIGen$BETA,
+  se = significant_resultsAWIGen$SE,  
+  REF = significant_resultsAWIGen$ALLELE1,
+  ALT = significant_resultsAWIGen$ALLELE0,
+  chr = significant_resultsAWIGen$CHR,
+  bp =significant_resultsAWIGen$BP,
+  af = significant_resultsAWIGen$A1FREQ)%>%
+  mutate(
+    N = 10775
+  )
 
 # Specify the path to the PLINK binary files
 plink_bin_path <- genetics.binaRies::get_plink_binary()
@@ -48,15 +54,6 @@ plink_bin_path <-"C:/Users/raylt/Documents/GWAS/plink.exe"
 file.exists(plink_bin_path)
 system(paste(plink_bin_path, "--version"), intern = TRUE)
 
-####Adjusting Column Names
-formatted_data_AWIGen <- dplyr::tibble(
-  rsid = significant_resultsAWIGen$SNP,
-  pval = significant_resultsAWIGen$P_BOLT_LMM,
-  effect_size = significant_resultsAWIGen$BETA,
-  std_error = significant_resultsAWIGen$SE,  
-  ref_allele = significant_resultsAWIGen$ALLELE1,
-  other_allele = significant_resultsAWIGen$ALLELE0
-)
 
 clumped_AWIGenresults <- ld_clump(
   dat = formatted_data_AWIGen,
@@ -64,27 +61,3 @@ clumped_AWIGenresults <- ld_clump(
   bfile = bfile_path, pop = "AFR"
 )
 
-clumped_AWIGenresults <- ld_clump(
-  dat = formatted_AWIGen,
-  plink_bin = plink_bin_path,
-  bfile = bfile_path, pop = "AFR"
-)
-
-# Manhattan plot
-pdf("LD_AWIGen.pdf", width=12, height=6)  # Width and height are in inches
-manhattan(
-  clumped_AWIGenresults,
-  chr = "chr",
-  bp = "bp",
-  snp = "rsid",
-  p = "pval",
-  ylim = c(0, 150),
-  col = c("skyblue3", "darkorchid1", "yellowgreen", "tomato2", "deepskyblue2", "orangered3"), 
-  genomewideline = FALSE,  
-  suggestiveline = FALSE,  
-  cex = 0.8,               
-  cex.axis = 0.9,         
-  lwd = 2                  
-)
-mtext("AWIGen", side = 3, line = 1, cex = 1.2)
-dev.off()

@@ -1,0 +1,108 @@
+# forest plot when GIANT threshold is 5x10-6)
+
+install.packages("devtools")
+devtools::install_github("NightingaleHealth/ggforestplot")  
+library(ggforestplot)
+
+install.packages("tidyverse")
+library(tidyverse)
+
+# Prepare the data
+plot_data <- tibble(
+  name = c("AWIGen", "GIANT"),
+  beta = c(0.0583, -0.013),
+  se = c(0.0120, 0.0016)
+)
+
+
+forestplot(
+  df = plot_data,
+  name = name,         # Dataset name
+  estimate = beta,     # Effect size (beta)
+  se = se              # Standard error (SE)
+) +
+  labs(
+    title = "rs6425446 when GIANT threshold lowered to 5e-6",
+    x = "Effect Size (Beta)",
+    y = "Dataset"
+  )
+
+**************************************************************************************
+###Using pre-clumped datasets
+formatted_data_AWIGen <- dplyr::tibble(
+  rsid = AWIGen_oriented$SNP,
+  pval = AWIGen_oriented$P_BOLT_LMM,
+  bhat = AWIGen_oriented$BETA,
+  se = AWIGen_oriented$SE,  
+  REF = AWIGen_oriented$ALLELE1,
+  ALT = AWIGen_oriented$ALLELE0,
+  chr = AWIGen_oriented$CHR,
+  bp =AWIGen_oriented$BP,
+  af = AWIGen_oriented$A1FREQ)%>%
+  mutate(
+    N = 10775
+  )
+
+formatted_data_GIANT <- dplyr::tibble(
+  rsid = vcf$ID,
+  pval = vcf$P,
+  bhat = vcf$ES,
+  se = vcf$SE,  
+  REF = vcf$REF,
+  ALT = vcf$ALT,
+  chr = vcf$seqnames,
+  bp =vcf$start,
+  af = vcf$AF)%>%
+  mutate(
+    N = 681275 
+  )
+
+plot_data <- tibble(
+  name = c("AWIGen", "GIANT"),
+  beta = c(0.0583, -0.013),
+  se = c(0.0120, 0.0016)
+)
+
+# Create the forest plot
+forestplot(
+  df = plot_data,
+  name = name,         # Dataset name
+  estimate = beta,     # Effect size (beta)
+  se = se              # Standard error (SE)
+) +
+  labs(
+    title = "Forest Plot for SNP rs6425446",
+    x = "Effect Size (Beta)",
+    y = "Dataset"
+  )
+
+# Reshape the data for all SNPs, combining AWIGen and GIANT results
+plot_data <- awigen_in_giant_data %>%
+  select(
+    rsid,                     # SNP ID
+    beta_AWIGen = bhat.x,      # Beta for AWIGen
+    se_AWIGen = se.x,          # SE for AWIGen
+    beta_GIANT = bhat.y,       # Beta for GIANT
+    se_GIANT = se.y            # SE for GIANT
+  ) %>%
+  gather(key = "Dataset", value = "beta", beta_AWIGen, beta_GIANT) %>%
+  gather(key = "SE_Group", value = "se", se_AWIGen, se_GIANT) %>%
+  filter((Dataset == "beta_AWIGen" & SE_Group == "se_AWIGen") |
+           (Dataset == "beta_GIANT" & SE_Group == "se_GIANT")) %>%
+  mutate(Dataset = ifelse(Dataset == "beta_AWIGen", "AWIGen", "GIANT"))
+
+# Load necessary library
+library(ggforestplot)
+
+# Create the forest plot for all SNPs
+forestplot(
+  df = plot_data,
+  name = rsid,        # SNP ID (rsid)
+  estimate = beta,    # Effect size (beta)
+  se = se             # Standard error (SE)
+) +
+  labs(
+    title = "Forest Plot for All SNPs",
+    x = "Effect Size (Beta)",
+    y = "SNP"
+  )

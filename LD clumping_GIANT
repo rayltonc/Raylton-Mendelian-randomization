@@ -72,25 +72,3 @@ clumped_results_GIANT <- ld_clump(
   bfile = bfile_path, pop = "EUR"
 )
 
-
-# Load necessary libraries
-library(qqman)
-
-# Manhattan plot
-pdf("LD GIANT2018.pdf", width=12, height=6)
-manhattan(
-  clumped_results,
-  chr = "chr",
-  bp = "bp",
-  snp = "rsid",
-  p = "pval",
-  ylim = c(0, 150),
-  col = c("dodgerblue2", "darkorange2", "mediumseagreen", "firebrick2"),  # Custom colors
-  genomewideline = FALSE,  # Disable the genome-wide significance line
-  suggestiveline = FALSE,  # Disable the suggestive significance line
-  cex = 0.8,          # Increase the size of the points
-  cex.axis = 0.9,     # Increase the size of the axis labels
-  lwd = 2             # Slightly increase the thickness of the points
-)
-title(main = "LD_GIANT 2018")
-dev.off()

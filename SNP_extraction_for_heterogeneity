@@ -1,0 +1,52 @@
+setwd("C:/Users/raylt/Documents/GWAS/Harmonisation")
+
+# Load necessary libraries
+library(dplyr)
+
+head (clumped_AWIGenresults)
+head (clumped_GIANTresults)
+head (formatted_data_AWIGen)
+head (formatted_data_GIANT)
+
+# Add a column to label the dataset
+clumped_AWIGenresults$Dataset <- "AWIGen"
+clumped_GIANTresults$Dataset <- "GIANT"
+
+#  keep only SNPs common in both datasets
+common_snps <- inner_join(clumped_AWIGenresults, clumped_GIANTresults, by = "rsid", suffix = c("_AWIGen", "_GIANT"))
+head (common_snps)
+num_common_snps <- nrow(common_snps) # Count the number of common SNPs
+print(paste("Number of common SNPs:", num_common_snps)) # Print the number of common SNPs
+
+# For SNPs unique to clumped_AWIGenresults, check if they exist in formatted_data_GIANT
+unique_awigen <- anti_join(clumped_AWIGenresults, clumped_GIANTresults, by = "rsid")
+awigen_in_giant_data <- inner_join(unique_awigen, formatted_data_GIANT, by = "rsid")
+
+head (unique_awigen)
+num_unique_awigen <- nrow(unique_awigen) # Count the number of SNPs unique_awigen
+print(paste("SNPs unique_awigen:", num_unique_awigen)) # Print the number of SNPs SNPs unique_awigen
+
+head (awigen_in_giant_data)
+num_awigen_in_giant_data <- nrow(awigen_in_giant_data) # Count the number of awigen SNPs  in giant_data
+print(paste("AWIGen SNPs in GIANT:", num_awigen_in_giant_data)) # Print the number of awigen SNPs  in giant_data
+
+# For SNPs unique to clumped_GIANTresults, check if they exist in formatted_data_AWIGen
+unique_giant <- anti_join(clumped_GIANTresults, clumped_AWIGenresults, by = "rsid")
+giant_in_awigen_data <- inner_join(unique_giant, formatted_data_AWIGen, by = "rsid")
+
+head (unique_giant)
+head (giant_in_awigen_data)
+num_giant_in_awigen_data <- nrow(giant_in_awigen_data) # Count the number of  giant SNPs  in awigen_data
+print(paste(" GIANT SNPs in AWIGen :", num_giant_in_awigen_data)) # Print the number of giant SNPs  in awigen_data
+
+# Combine clumped_AWIGenresults with unique SNPs from clumped_GIANTresults that are in formatted_data_AWIGen
+awigen_combined <- bind_rows(common_snps, giant_in_awigen_data)
+
+# Combine clumped_GIANTresults with unique SNPs from clumped_AWIGenresults that are in formatted_data_GIANT
+giant_combined <- bind_rows(common_snps, awigen_in_giant_data)
+
+# Save the new combined datasets
+write.csv(awigen_combined, "C:/Users/raylt/Documents/GWAS/Harmonisation/combined_AWIGen.csv", row.names = FALSE)
+write.csv(giant_combined, "C:/Users/raylt/Documents/GWAS/Harmonisation/combined_GIANT.csv", row.names = FALSE)
+
+#cross-reference the SNPs with an online database (dbSNP)

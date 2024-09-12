@@ -22,7 +22,7 @@ vcf %>%
     # Swap effect and alternate alleles if needed
     TempAllele = ifelse(Flip, REF, NA),
     REF = ifelse(Flip, ALT, REF),
-    ALT = ifelse(Flip, TempAllele, ALT),
+    ALT = ifelse(Flip, TempAllele, ALT),)
     
     # Recalculate allele frequency
     AF = ifelse(Flip, 1 - AF, AF)
@@ -53,43 +53,25 @@ system(paste(plink_bin_path, "--version"), intern = TRUE)
  
 # Create tibble with additional columns
 formatted_data_GIANT <- dplyr::tibble(
-  rsid = significant_SNPGIANT2018$ID,
-  pval = significant_SNPGIANT2018$P,
-  effect_size = significant_SNPGIANT2018$ES,
-  std_error = significant_SNPGIANT2018$SE,  
-  ref_allele = significant_SNPGIANT2018$REF,
-  other_allele = significant_SNPGIANT2018$ALT
-)
+  rsid = significant_resultsGIANT2018$ID,
+  pval = significant_resultsGIANT2018$P,
+  bhat = significant_resultsGIANT2018$ES,
+  se = significant_resultsGIANT2018$SE,  
+  REF = significant_resultsGIANT2018$REF,
+  ALT = significant_resultsGIANT2018$ALT,
+  chr = significant_resultsGIANT2018$seqnames,
+  bp =significant_resultsGIANT2018$start,
+  af = significant_resultsGIANT2018$AF)%>%
+  mutate(
+    N = 681275 
+  )
 
 clumped_results_GIANT <- ld_clump(
   dat = formatted_data_GIANT,
   plink_bin = plink_bin_path,
-  bfile = bfile_path, pop = "AFR"
+  bfile = bfile_path, pop = "EUR"
 )
 
-# Convert data to a tibble and create rsid & pval labels
-significant_SNPGIANT2018 <- as_tibble(significant_SNPGIANT2018)
-
-# Create a tibble with necessary columns for a Manhattan plot
-formatted_data <- tibble(
-  rsid = significant_SNPGIANT2018$ID,        
-  chr = significant_SNPGIANT2018$seqnames,      
-  bp = significant_SNPGIANT2018$start,          
-  pval = significant_SNPGIANT2018$P,         
-)
-
-# Specify the path to the PLINK binary files
-plink_bin_path <- genetics.binaRies::get_plink_binary()
-bfile_path <- "C:/Users/raylt/Documents/GWAS/1kg.v3/AFR" 
-
-plink_bin_path <-"C:/Users/raylt/Documents/GWAS/plink.exe"
-file.exists(plink_bin_path)
-system(paste(plink_bin_path, "--version"), intern = TRUE)
-
-clumped_results <- ld_clump(
-  dat = formatted_data,
-  plink_bin = plink_bin_path,
-  bfile = bfile_path
 
 # Load necessary libraries
 library(qqman)

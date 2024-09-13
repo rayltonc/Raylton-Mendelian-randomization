@@ -1,0 +1,17 @@
+****Ubuntu
+sudo apt-get update
+sudo apt-get install bcftools tabix
+
+cd /mnt
+/mnt$ cd c
+/mnt/c$ cd Documents\ and\ Settings
+/mnt/c/Documents and Settings$ cd raylt
+/mnt/c/Documents and Settings/raylt$ cd Downloads
+/mnt/c/Documents and Settings/raylt/Downloads$ cd 1000_Genomes
+
+***zip 1000 Genomes vcf
+/mnt/c/Documents and Settings/raylt/Downloads/1000_Genomes$ bgzip 1000GENOMES-phase_3.vcf
+
+***index file
+tabix -p vcf 1000GENOMES-phase_3.vcf.gz
+

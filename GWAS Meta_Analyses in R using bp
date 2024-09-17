@@ -1,0 +1,143 @@
+setwd("C:/Users/raylt/Documents/GWAS/Harmonisation")
+
+library(dplyr)
+
+head (clumped_AWIGenresults)
+head (clumped_results_GIANT)
+head (formatted_data_AWIGen)
+head (formatted_data_GIANT)
+
+# Add a column to label the dataset
+clumped_AWIGenresults$Dataset <- "AWIGen"
+clumped_results_GIANT$Dataset <- "GIANT"
+
+#  keep only SNPs common in both datasets
+common_snps <- inner_join(clumped_AWIGenresults, clumped_results_GIANT, by = "bp", suffix = c("_AWIGen", "_GIANT"))
+head (common_snps)
+num_common_snps <- nrow(common_snps) # Count the number of common SNPs
+print(paste("Number of common SNPs:", num_common_snps)) # Print the number of common SNPs
+
+# For SNPs unique to clumped_AWIGenresults, check if they exist in formatted_data_GIANT
+unique_awigen <- anti_join(clumped_AWIGenresults, clumped_results_GIANT, by = "bp")
+awigen_in_giant_data <- inner_join(unique_awigen, formatted_data_GIANT, by = "bp")
+
+
+head (unique_awigen)
+num_unique_awigen <- nrow(unique_awigen) # Count the number of SNPs unique_awigen
+print(paste("SNPs unique_awigen:", num_unique_awigen)) # Print the number of SNPs SNPs unique_awigen (12 SNps)
+
+head (awigen_in_giant_data)
+num_awigen_in_giant_data <- nrow(awigen_in_giant_data) # Count the number of awigen SNPs  in giant_data
+print(paste("AWIGen SNPs in GIANT:", num_awigen_in_giant_data)) # Print the number of awigen SNPs  in giant_data (n=1)
+
+# For SNPs unique to clumped_GIANTresults, check if they exist in formatted_data_AWIGen
+unique_giant <- anti_join(clumped_results_GIANT, clumped_AWIGenresults, by = "bp")
+giant_in_awigen_data <- inner_join(unique_giant, formatted_data_AWIGen, by = "bp")
+
+head (unique_giant)
+head (giant_in_awigen_data)
+num_giant_in_awigen_data <- nrow(giant_in_awigen_data) # Count the number of  giant SNPs  in awigen_data
+print(paste(" GIANT SNPs in AWIGen :", num_giant_in_awigen_data)) # Print the number of giant SNPs  in awigen_data (n=0)
+
+# Combine clumped_AWIGenresults with unique SNPs from clumped_GIANTresults that are in formatted_data_AWIGen
+awigen_combined <- bind_rows(giant_in_awigen_data)
+head (awigen_combined)
+num_awigen_combined <- nrow(awigen_combined) # Count the number of  giant SNPs  in awigen_data
+print(paste(" common snps plus GIANT in AWIGen :", num_awigen_combined)) # Print the number of giant SNPs  in awigen_data (n=0)
+
+# Combine clumped_GIANTresults with unique SNPs from clumped_AWIGenresults that are in formatted_data_GIANT
+giant_combined <- bind_rows(awigen_in_giant_data)
+head (giant_combined)
+num_giant_combined <- nrow(giant_combined) # Count the number of  giant SNPs  in awigen_data
+print(paste(" common snps plus AWIGen in GIANT :", num_giant_combined)) # Print the number of giant SNPs  in awigen_data (n=0)
+
+# Save the new combined datasets
+write.csv(awigen_combined, "C:/Users/raylt/Documents/GWAS/Harmonisation/combined_AWIGen.csv", row.names = FALSE)
+write.csv(giant_combined, "C:/Users/raylt/Documents/GWAS/Harmonisation/combined_GIANT.csv", row.names = FALSE)
+
+#cross-reference the SNPs with an online database (dbSNP)
+
+
+
+rm(dataset1, dataset2, info_df, input_data)
+
+
+
+install.packages("devtools")
+devtools::install_github("NightingaleHealth/ggforestplot")  
+library(ggforestplot)
+
+install.packages("tidyverse")
+library(tidyverse)
+
+library(ggplot2)
+
+# Prepare the data
+plot_data <- tibble(
+  name = c("AWIGen", "GIANT"),
+  beta = c(0.0583, 0.013),
+  se = c(0.0120, 0.0016)
+)
+
+# Create the forest plot
+forestplot(
+  df = plot_data,
+  name = name,         # Dataset name
+  estimate = beta,     # Effect size (beta)
+  se = se              # Standard error (SE)
+) +
+  labs(
+    title = "rs6425446 when GIANT threshold lowered to 5e-6",
+    x = "Effect Size (Beta)",
+    y = "Dataset"
+  )
+
+formatted_data_AWIGen <- dplyr::tibble(
+  rsid = AWIGen_oriented$SNP,
+  pval = AWIGen_oriented$P_BOLT_LMM,
+  bhat = AWIGen_oriented$BETA,
+  se = AWIGen_oriented$SE,  
+  REF = AWIGen_oriented$ALLELE1,
+  ALT = AWIGen_oriented$ALLELE0,
+  chr = AWIGen_oriented$CHR,
+  bp =AWIGen_oriented$BP,
+  af = AWIGen_oriented$A1FREQ)%>%
+  mutate(
+    N = 10775
+  )
+
+formatted_data_GIANT <- dplyr::tibble(
+  rsid = vcf$ID,
+  pval = vcf$P,
+  bhat = vcf$ES,
+  se = vcf$SE,  
+  REF = vcf$REF,
+  ALT = vcf$ALT,
+  chr = vcf$seqnames,
+  bp =vcf$start,
+  af = vcf$AF)%>%
+  mutate(
+    N = 681275 
+  )
+
+plot_data <- tibble(
+  name = c("AWIGen", "GIANT"),
+  beta = c(0.0583, 0.013),
+  se = c(0.0120, 0.0016)
+)
+
+# Create the forest plot
+forestplot(
+  df = plot_data,
+  name = name,         # Dataset name
+  estimate = beta,     # Effect size (beta)
+  se = se              # Standard error (SE)
+) +
+  labs(
+    title = "Forest Plot for SNP rs6425446",
+    x = "Effect Size (Beta)",
+    y = "Dataset"
+  )
+
+
+

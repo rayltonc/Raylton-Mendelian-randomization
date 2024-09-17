@@ -15,3 +15,40 @@ cd /mnt
 ***index file
 tabix -p vcf 1000GENOMES-phase_3.vcf.gz
 
+setwd("C:/Users/raylt/Downloads/1000_Genomes")
+
+library(VariantAnnotation)
+library(data.table)
+
+# Read the sample panel
+
+panel <- read.table("sample_panel.txt", header = TRUE, sep = "\t", fill = TRUE)
+colnames (panel)
+head (panel)
+
+# Extract AFR subpopulations (e.g., YRI, LWK, GWD, MSL, ESN)
+afr_subpop <- c("YRI", "LWK", "GWD", "MSL", "ESN", "ACB", "ASW")
+afr_samples <- panel[panel$POPULATION %in% afr_subpop, "SAMPLE_ID"]
+head (afr_samples)
+
+#Remove Duplicates
+afr_samples_unique <- unique(afr_samples)
+length(afr_samples_unique) # Number of unique samples
+length(afr_samples)        # Number of original samples
+
+# Extract EUR subpopulations (e.g., CEU, TSI, FIN, GBR, IBS)
+eur_subpop <- c("CEU", "TSI", "FIN", "GBR", "IBS")
+eur_samples <- panel[panel$POPULATION %in% eur_subpop, "SAMPLE_ID"]
+
+#Remove Duplicates
+eur_samples_unique <- unique(eur_samples)
+length(eur_samples_unique) # Number of unique samples
+length(eur_samples)        # Number of original samples
+
+# Write sample lists to text files
+write.table(afr_samples_unique, "afr_subpop_samples.txt", col.names = FALSE, row.names = FALSE, quote = FALSE)
+write.table(eur_samples_unique, "eur_subpop_samples.txt", col.names = FALSE, row.names = FALSE, quote = FALSE)
+
+# Extract the subpopulation samples using bcftools in Ubuntu
+#AFR
+bcftools view -S afr_subpop_samples.txt -Oz -o afr_subpop.vcf.gz C:/Users/raylt/Downloads/1000_Genomes/1000GENOMES-phase_3.vcf.gz

@@ -61,3 +61,4 @@ clumped_AWIGenresults <- ld_clump(
   bfile = bfile_path, pop = "AFR"
 )
 
+###12 SNPs

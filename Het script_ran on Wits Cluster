@@ -1,4 +1,4 @@
-#remotes::install_github('MRCIEU/gwasvcf')
+remotes::install_github('MRCIEU/gwasvcf')
 library(ieugwasr)
 library(data.table)
 library(gwasvcf)
@@ -12,7 +12,7 @@ library(data.table)
 #            CHR   POS             SNP Tested_Allele Other_Allele
 #a          Freq_Tested_Allele    BETA     SE       P      N     INFO
 vcf_giant<-fread('bmi.giant-ukbb.meta-analysis.combined.23May2018.txt.gz')
-vcf_awigen<-fread('bmi_summary_stat/bmi_c_qc.dosage.stat.gz')
+vcf_awigen<-fread('bmi_c_qc.dosage.stat.gz')
 plink_bin_path="/home/jeantristan/bin/plink"
 
 #vcf_giant<-vcf_to_granges(vcf_giant) %>% dplyr::as_tibble()

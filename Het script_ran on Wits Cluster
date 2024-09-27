@@ -13,16 +13,13 @@ library(data.table)
 #a          Freq_Tested_Allele    BETA     SE       P      N     INFO
 vcf_giant<-fread('bmi.giant-ukbb.meta-analysis.combined.23May2018.txt.gz')
 vcf_awigen<-fread('bmi_c_qc.dosage.stat.gz')
-plink_bin_path="/home/jeantristan/bin/plink"
+plink_bin_path="/home/raylton/bin/plink"
 
 #vcf_giant<-vcf_to_granges(vcf_giant) %>% dplyr::as_tibble()
 
-## read second
-
 ## we extract common position ?
 
-
-#we formated awigen
+#formated awigen
 formatted_data_AWIGen <- dplyr::tibble(
   rsid.awigen = vcf_awigen$SNP,
   pval.awigen = vcf_awigen$P_BOLT_LMM,
@@ -37,10 +34,10 @@ formatted_data_AWIGen <- dplyr::tibble(
     N.awigen = 10775
   )
 
-#
+#formated giant
 
 formatted_data_giant<- dplyr::tibble(
-  chrbp=paste(vcf_giant$CHR,vcf_giant$POS,sep=':'),			    
+  chrbp=paste(vcf_giant$CHR,vcf_giant$POS,sep=':'),
   rsid.giant = vcf_giant$SNP,
   pval.giant = vcf_giant$P,
   bhat.giant = vcf_giant$BETA,
@@ -53,11 +50,11 @@ formatted_data_giant<- dplyr::tibble(
   N.giant = vcf_giant$N
  )
 
-
-
 mergeboth<-formatted_data_AWIGen %>% inner_join(formatted_data_giant,by=c('chr','bp'))
 ## check a1 and a2
-bal<-((mergeboth$effect.giant == mergeboth$effect.awigen) & (mergeboth$noneffect.giant == mergeboth$noneffect.awigen)) | ((mergeboth$effect.giant == mergeboth$noneffect.awigen) & (mergeboth$noneffect.giant == mergeboth$effect.awigen)) 
+mergeboth<-formatted_data_AWIGen %>% inner_join(formatted_data_giant,by=c('chr','bp'))
+## check a1 and a2
+bal<-((mergeboth$effect.giant == mergeboth$effect.awigen) & (mergeboth$noneffect.giant == mergeboth$noneffect.awigen)) | ((mergeboth$effect.giant == mergeboth$noneffect.awigen) & (mergeboth$noneffect.giant == mergeboth$effect.awigen))
 mergeboth<-mergeboth[bal,]
 tmp<-table(mergeboth$chrbp)
 mergeboth<-mergeboth[!(mergeboth$chrbp %in% names(tmp[tmp>1])),]
@@ -96,79 +93,7 @@ mergeboth <- mergeboth %>% mutate(
 mergeboth <- mergeboth %>% mutate(
 effect.allele = effect.awigen,
 noneffect.allele = noneffect.awigen
-				  ) %>% select(-effect.awigen,-noneffect.awigen,-noneffect.giant, -effect.giant)
+                                  ) %>% select(-effect.awigen,-noneffect.awigen,-noneffect.giant, -effect.giant)
 
-
-
-## clump procedure
-
-# used version of european must be in hg19 as your summary stat
-bfile='eur'
-beur=fread(paste(bfile,'.bim',sep=''))
-names(beur)<-c('chr','rsid.eur1000g','cm.bim','bp','A1.bim','A2.bim')
-beur$chr<-as.factor(beur$chr)
-# we merge with european database to obtained same rs between 
-mergeboth_eur <- mergeboth %>% inner_join(beur,by=c('chr','bp'))
-# 
-bal<-((mergeboth_eur$effect.allele == mergeboth_eur$A2.bim) & (mergeboth_eur$noneffect.allele == mergeboth_eur$A1.bim)) | ((mergeboth_eur$effect.allele == mergeboth_eur$A1.bim) & (mergeboth_eur$noneffect.allele == mergeboth_eur$A2.bim)) 
-
-## we select for giant rsid and pval
-giant_clum_both<-mergeboth_eur %>% mutate(
-				 rsid = rsid.eur1000g,
-				 pval = pval.giant
-				 ) %>% select(rsid, pval) 
-
-giant_clum_both<-giant_clum_both[bal,]
-# on format for clump function
-## #here I'm chossing treshold to clump...
-ldc_giant<-ld_clump(
-  dat = giant_clum_both,
-  plink_bin = plink_bin_path,
-  bfile = bfile,
-  clump_p = 5*10**-8
-)
-
-# you obtained value of result for awigen and giant where lead snps are in common.
-mergeboth_eur_clump<-mergeboth_eur %>%  inner_join(ldc_giant,by=join_by(rsid.eur1000g==rsid))
-
-################## AWIGEN
-# same procedure using awigen ld
-# used version of european must be in hg19 as your summary stat
-
-# plink file for awigen
-bfile='all_imputed_map_qc'
-bawigen=fread(paste(bfile,'.bim',sep=''))
-names(bawigen)<-c('chr','rsid.awigen1000g','cm.bim','bp','A1.bim','A2.bim')
-bawigen$chr<-as.factor(bawigen$chr)
-# we merge with awigenopean database to obtained same rs between 
-mergeboth_awigen <- mergeboth %>% inner_join(bawigen,by=c('chr','bp'))
-# 
-bal<-((mergeboth_awigen$effect.allele == mergeboth_awigen$A2.bim) & (mergeboth_awigen$noneffect.allele == mergeboth_awigen$A1.bim)) | ((mergeboth_awigen$effect.allele == mergeboth_awigen$A1.bim) & (mergeboth_awigen$noneffect.allele == mergeboth_awigen$A2.bim)) 
-
-## we select for awigen rsid and pval
-awigen_clum_both<-mergeboth_awigen %>% mutate(
-                                 rsid = rsid.awigen1000g,
-                                 pval = pval.awigen
-                                 ) %>% select(rsid, pval)
-
-awigen_clum_both<-awigen_clum_both[bal,]
-# on format for clump function
-## #here I'm chossing treshold to clump...
-ldc_awigen<-ld_clump(
-  dat = awigen_clum_both,
-  plink_bin = plink_bin_path,
-  bfile = bfile,
-  clump_p = 5*10**-6
-)
-
-# you obtained value of result for awigen and awigen where lead snps are in common.
-mergeboth_awigen_clump<-mergeboth_awigen %>%  inner_join(ldc_awigen,by=join_by(rsid.awigen1000g==rsid))
-
-# you obtained value of result for awigen and awigen where lead snps are in common.
-mergeboth_awigen_clump<-mergeboth_awigen %>%  inner_join(ldc_awigen,by=join_by(rsid.awigen1000g==rsid))
-write.csv(mergeboth_awigen_clump, row.names=F, file='mergeboth_awigen_clump.csv')
-write.csv(mergeboth_eur_clump, row.names=F, file='mergeboth_eur_clump.csv')
-
-
-as.data.frame(mergeboth[mergeboth$pval.giant<5*10**-4 & mergeboth$pval.awigen<5*10**-6,c('chr','bp','bhat.awigen','bhat.giant')])
-as.data.frame(mergeboth[mergeboth$pval.giant<5*10**-3 & mergeboth$pval.awigen<5*10**-5,c('chr','bp','bhat.awigen','bhat.giant')])
+#merge EUR and AWIGen references
+plink --bfile all_imputed_map_qc --bmerge EUR --make-bed --out AFR_EUR_combined

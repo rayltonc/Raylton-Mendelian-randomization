@@ -1,0 +1,35 @@
+SCHEME STDERR
+GENOMICCONTROL ON
+
+# Process the merged dataset
+PROCESS /home/raylton/mergeboth.txt
+
+# Specify columns from the AWIGen dataset
+MARKER rsid.awigen
+ALLELE effect.allele noneffect.allele
+EFFECT bhat.awigen
+STDERR se.awigen
+PVALUE pval.awigen
+CHR chr
+BP bp
+
+# Process the merged dataset
+PROCESS /home/raylton/mergeboth.txt
+
+# Specify columns from the GIANT dataset
+MARKER rsid.giant
+ALLELE effect.allele noneffect.allele
+EFFECT bhat.giant
+STDERR se.giant
+PVALUE pval.giant
+CHR chr
+BP bp
+
+# Process the merged dataset
+PROCESS /home/raylton/mergeboth.txt
+
+OUTFILE meta_analysis_ .tbl
+
+# Perform the meta-analysis
+ANALYZE
+

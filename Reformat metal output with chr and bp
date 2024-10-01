@@ -1,0 +1,15 @@
+#load packages
+library(dplyr)
+library(data.table)
+
+#load mergeboth data
+mergeboth_data <- read.table("/home/raylton/mergeboth.txt", header = TRUE, sep = "\t")
+
+#load meta analysed data from metal
+meta_analysis_data <- read.table(""/home/raylton/meta_analysis_1.tbl", header = TRUE, sep = "\t")
+
+#Clean meta analysis data by removing on rsids
+meta_analysis_data$MarkerName <- gsub(":.*", "", meta_analysis_data$MarkerName)
+
+#Generate reformatted data with chr and bp
+combined_data <- left_join(meta_analysis_data, mergeboth, by = "SNP")

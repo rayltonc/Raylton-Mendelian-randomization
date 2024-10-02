@@ -1,0 +1,21 @@
+## Separate 'chr_bp' into 'chr' and 'bp' using tidyr's separate function
+install.packages("tidyr")
+library(tidyr)
+
+##reformat for ld clumping
+#separate chrbp 
+meta_analysed <- meta_analysed %>%
+  separate(chrbp, into = c("chr", "bp"), sep = ":")
+
+rename Markername to rsid
+meta_analysed <- meta_analysed %>%
+  rename(rsid = MarkerName)
+
+remotes::install_github('MRCIEU/gwasvcf')
+library(ieugwasr)
+
+#LD clumping using AWIGen_EUR merged reference panel
+ldc_meta_analysed <- ld_clump(
+  dat = meta_analysed,
+  plink_bin = "/home/raylton/R/x86_64-redhat-linux-gnu-library/4.4/genetics.binaRies/bin/plink",
+  bfile = "/home/raylton/AFR_EUR_combined_flipped-merge")

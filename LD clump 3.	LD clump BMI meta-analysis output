@@ -22,7 +22,7 @@ remotes::install_github('MRCIEU/gwasvcf')
 library(ieugwasr)
 
 ldc_meta_analysed <- ld_clump(
-  dat = meta_analysed,
+  dat = significant_meta_snps,
   plink_bin = "/home/raylton/R/x86_64-redhat-linux-gnu-library/4.4/genetics.binaRies/bin/plink",
   bfile = "/home/raylton/AFR_EUR_combined_flipped-merge",
   clump_kb = 10000,    

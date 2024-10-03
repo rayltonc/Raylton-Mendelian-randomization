@@ -18,12 +18,6 @@ meta_analysed <- meta_analysed %>%
 remotes::install_github('MRCIEU/gwasvcf')
 library(ieugwasr)
 
-#LD clumping using AWIGen_EUR merged reference panel
-ldc_meta_analysed <- ld_clump(
-  dat = meta_analysed,
-  plink_bin = "/home/raylton/R/x86_64-redhat-linux-gnu-library/4.4/genetics.binaRies/bin/plink",
-  bfile = "/home/raylton/AFR_EUR_combined_flipped-merge")
-
 ldc_meta_analysed <- ld_clump(
   dat = meta_analysed,
   plink_bin = "/home/raylton/R/x86_64-redhat-linux-gnu-library/4.4/genetics.binaRies/bin/plink",

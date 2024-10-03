@@ -108,6 +108,17 @@ mergeboth<- mergeboth%>%
 
     select(-Flip, -TempAllele) # Remove temporary columns used for calculations
 
+## everything must be on allele giant
+mergeboth <- mergeboth %>% mutate(
+   Flip = effect.giant != effect.awigen,
+   bhat.awigen = ifelse(Flip, -bhat.awigen, bhat.awigen),
+   TempAllele = effect.awigen,
+   effect.awigen = ifelse(Flip, noneffect.awigen, TempAllele),
+   noneffect.awigen = ifelse(Flip, TempAllele, noneffect.awigen),
+   af.awigen= ifelse(Flip, 1 - af.awigen, af.awigen)
+) %>%
+    select(-Flip, -TempAllele) # Remove temporary columns used for calculations
+
 mergeboth <- mergeboth %>% mutate(
 effect.allele = effect.awigen,
 noneffect.allele = noneffect.awigen

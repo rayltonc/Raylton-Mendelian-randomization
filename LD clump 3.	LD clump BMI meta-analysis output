@@ -27,7 +27,7 @@ ldc_meta_analysed <- ld_clump(
   bfile = "/home/raylton/AFR_EUR_combined_flipped-merge",
   clump_kb = 10000,    
   clump_p1 =1,
-  clump_p1 =2,
+  clump_p2 =2,
   clump_r2 = 0.001)
 
 write.csv(ldc_meta_analysed, file = "clumped_snps.csv", row.names = FALSE)

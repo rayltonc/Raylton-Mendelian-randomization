@@ -26,7 +26,6 @@ ldc_meta_analysed <- ld_clump(
   plink_bin = "/home/raylton/R/x86_64-redhat-linux-gnu-library/4.4/genetics.binaRies/bin/plink",
   bfile = "/home/raylton/AFR_EUR_combined_flipped-merge",
   clump_kb = 10000,    
-  clump_p1 =1,
   clump_r2 = 0.001)
 
 write.csv(ldc_meta_analysed, file = "clumped_snps.csv", row.names = FALSE)

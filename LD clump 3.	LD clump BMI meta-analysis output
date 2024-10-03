@@ -1,6 +1,6 @@
 ## Separate 'chr_bp' into 'chr' and 'bp' using tidyr's separate function
 install.packages("tidyr")
-library(tidyr)
+library(tidyr) 
 
 ##reformat for ld clumping
 #separate chrbp 
@@ -29,3 +29,20 @@ ldc_meta_analysed <- ld_clump(
   clump_r2 = 0.001)
 
 write.csv(ldc_meta_analysed, file = "clumped_snps.csv", row.names = FALSE)
+
+# Extract relevant columns for each ancestry
+AWIGen_columns <- c("rsid", "Allele1", "Allele2", "Effect", "StdErr", "pval", 
+                 "Direction", "rsid.awigen", "pval.awigen", "bhat.awigen", 
+                 "se.awigen", "af.awigen", "N.awigen", "chr", "bp")
+
+GIANT_columns <- c("rsid", "Allele1", "Allele2", "Effect", "StdErr", "pval", 
+                 "Direction", "rsid.giant", "pval.giant", "bhat.giant", 
+                 "se.giant", "af.giant", "N.giant", "effect.allele", "noneffect.allele","chr", "bp")
+
+# Create separate data frames for EUR and AFR
+filtered_AWIGen <- ldc_meta_analysed[, AWIGen_columns]
+filtered_GIANT <- ldc_meta_analysed[, GIANT_columns]
+
+# Save the filtered data to CSV files
+write.csv(filtered_AWIGen, "clumped_AWIGen_snps.csv", row.names = FALSE)
+write.csv(filtered_GIANT, "clumped_GIANT_snps.csv", row.names = FALSE)

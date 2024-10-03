@@ -15,6 +15,9 @@ rename P.value to pval
 meta_analysed <- meta_analysed %>%
   rename( pval= P.value)
 
+# Filter SNPs by genome-wide significance threshold (p-value < 5e-08)
+significant_meta_snps <- subset(meta_analysed, pval < 5e-08)
+
 remotes::install_github('MRCIEU/gwasvcf')
 library(ieugwasr)
 
@@ -23,7 +26,8 @@ ldc_meta_analysed <- ld_clump(
   plink_bin = "/home/raylton/R/x86_64-redhat-linux-gnu-library/4.4/genetics.binaRies/bin/plink",
   bfile = "/home/raylton/AFR_EUR_combined_flipped-merge",
   clump_kb = 10000,    
-  clump_p = 5*10**-8,   
+  clump_p1 =1,
+  clump_p1 =2,
   clump_r2 = 0.001)
 
 write.csv(ldc_meta_analysed, file = "clumped_snps.csv", row.names = FALSE)

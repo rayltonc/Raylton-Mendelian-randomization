@@ -1,0 +1,3 @@
+
+#merge EUR and AWIGen references
+plink --bfile all_imputed_map_qc --bmerge EUR --make-bed --out AFR_EUR_combined

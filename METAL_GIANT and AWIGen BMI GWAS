@@ -1,3 +1,5 @@
+[raylton@ui ~]$ ls ~/generic-metal/
+
 SCHEME STDERR
 GENOMICCONTROL ON
 
@@ -32,4 +34,6 @@ OUTFILE meta_analysis_ .tbl
 
 # Perform the meta-analysis
 ANALYZE
+
+## Complete results will be stored in file 'meta_analysis_1.tbl'
 

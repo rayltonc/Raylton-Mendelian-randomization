@@ -1,0 +1,36 @@
+
+library(dplyr)
+
+
+# 1. Calculate Meta-Analysis Effect and Variance for each SNP
+gwas_merged <- gwas_merged %>%
+  rowwise() %>%
+  mutate(
+    # Meta-analysis effect and variance (fixed-effects model)
+    meta_effect = (bhat.giant / se.giant^2 + bhat.awigen / se.awigen^2) / 
+                  (1 / se.giant^2 + 1 / se.awigen^2),
+    meta_se = sqrt(1 / (1 / se.giant^2 + 1 / se.awigen^2))
+  )
+
+# 2. Calculate per-population Z-scores and p-values for each SNP
+# Z-scores measure how much each population's effect deviates from the meta-analysis effect
+gwas_merged <- gwas_merged %>%
+  mutate(
+    z_giant = (bhat.giant - meta_effect) / sqrt(se.giant^2 + meta_se^2),  # Z-score for GIANT
+    z_awigen = (bhat.awigen - meta_effect) / sqrt(se.awigen^2 + meta_se^2),  # Z-score for AWIGen
+    pval_giant = 2 * pnorm(-abs(z_giant)),  # Two-tailed p-value for GIANT
+    pval_awigen = 2 * pnorm(-abs(z_awigen))  # Two-tailed p-value for AWIGen
+  )
+
+# 3. Identify outliers based on p-value threshold (e.g., p < 0.05)
+outliers <- gwas_merged %>%
+  filter(pval_giant < 0.05 | pval_awigen < 0.05)
+
+# Save the results
+write.table(gwas_merged, "per_population_outlier_analysis.txt", row.names = FALSE, quote = FALSE, sep = "\t")
+write.table(outliers, "significant_outlier_snps.txt", row.names = FALSE, quote = FALSE, sep = "\t")
+
+# Summary Output
+cat("Outlier analysis complete. Number of significant SNPs per population:\n")
+cat("GIANT: ", sum(gwas_merged$pval_giant < 0.05), "\n")
+cat("AWIGen: ", sum(gwas_merged$pval_awigen < 0.05), "\n")

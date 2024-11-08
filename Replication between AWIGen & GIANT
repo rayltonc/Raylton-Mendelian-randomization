@@ -1,0 +1,31 @@
+library(dplyr)
+
+# 1. Determine the sign of the effect sizes in both populations
+ldc_meta_analysed <- ldc_meta_analysed %>%
+  mutate(
+    sign_giant = ifelse(bhat.giant > 0, 1, -1),  # 1 if positive effect, -1 if negative
+    sign_awigen = ifelse(bhat.awigen > 0, 1, -1)   # 1 if positive effect, -1 if negative
+  )
+
+# 2. Count the number of SNPs with matching signs
+ldc_meta_analysed <- ldc_meta_analysed %>%
+  mutate(
+    matching_signs = ifelse(sign_giant == sign_awigen, 1, 0)  # 1 if signs match, 0 if they don't
+  )
+
+# Calculate the observed number of matching signs
+observed_matching_signs <- sum(ldc_meta_analysed$matching_signs)
+
+# 3. Weighted sum of matching signs (adjusted for statistical power differences)
+
+weighted_matching_signs <- sum(ldc_meta_analysed$matching_signs * ldc_meta_analysed$N.giant * ldc_meta_analysed$N.awigen)
+
+# 4: Expected number of matching signs under the null hypothesis
+# If the signs are independent, the expected probability of matching signs is 0.5 (random direction)
+expected_matching_signs <- 0.5 * nrow(ldc_meta_analysed)
+
+# 5: Test if observed matching signs deviate from expected using a binomial test
+p_value <- binom.test(observed_matching_signs, nrow(ldc_meta_analysed), p = 0.5)$p.value
+
+# 7: Save results
+write.table(ldc_meta_analysed, "degree_of_replication_results.txt", row.names = FALSE, quote = FALSE, sep = "\t")

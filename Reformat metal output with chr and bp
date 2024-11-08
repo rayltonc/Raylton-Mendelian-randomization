@@ -6,7 +6,7 @@ library(data.table)
 mergeboth_data <- read.table("/home/raylton/mergeboth.txt", header = TRUE, sep = "\t")
 
 #load meta analysed data from metal
-meta_analysis_data <- read.table(""/home/raylton/meta_analysis_1.tbl", header = TRUE, sep = "\t")
+meta_analysis_data <- read.table("/home/raylton/meta_analysis_1.tbl", header = TRUE, sep = "\t")
 
 #Clean meta analysis data by removing on rsids
 meta_analysis_data$MarkerName <- gsub(":.*", "", meta_analysis_data$MarkerName)

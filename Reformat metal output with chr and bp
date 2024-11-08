@@ -2,14 +2,19 @@
 library(dplyr)
 library(data.table)
 
-#load mergeboth data
-mergeboth_data <- read.table("/home/raylton/mergeboth.txt", header = TRUE, sep = "\t")
+## Separate 'chr_bp' into 'chr' and 'bp' using tidyr's separate function
+install.packages("tidyr")
+library(tidyr) 
 
-#load meta analysed data from metal
-meta_analysis_data <- read.table("/home/raylton/meta_analysis_1.tbl", header = TRUE, sep = "\t")
+##reformat for ld clumping
+#separate chrbp 
+meta_analysed <- meta_analysed %>%
+  separate(chrbp, into = c("chr", "bp"), sep = ":")
 
-#Clean meta analysis data by removing on rsids
-meta_analysis_data$MarkerName <- gsub(":.*", "", meta_analysis_data$MarkerName)
+rename Markername to rsid
+meta_analysed <- meta_analysed %>%
+  rename(rsid = MarkerName)
 
-#Generate reformatted data with chr and bp
-combined_data <- left_join(meta_analysis_data, mergeboth, by = "SNP")
+rename P.value to pval
+meta_analysed <- meta_analysed %>%
+  rename( pval= P.value)

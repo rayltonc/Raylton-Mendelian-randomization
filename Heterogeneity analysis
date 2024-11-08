@@ -1,0 +1,32 @@
+###heterogeneity.R
+
+install.packages(c("meta", "dplyr", "data.table"))
+
+# Load necessary libraries
+library(meta)
+library(dplyr)
+library(data.table)
+
+# Merge AWIGen and GIANT data on SNP IDs (rsid)
+gwas_merged <- inner_join(awigen_data, giant_data, by = "rsid", suffix = c(".awigen", ".giant"))
+
+# Calculate heterogeneity (Cochran's Q test) between GIANT and AWIGen effect sizes
+# Ensure effect sizes (bhat) and standard errors (se) are aligned
+heterogeneity_results <- gwas_merged %>%
+  rowwise() %>%
+  mutate(
+    Q = (bhat.awigen - bhat.giant)^2 / (se.awigen^2 + se.giant^2),  # Cochran’s Q statistic
+    pval_heterogeneity = pchisq(Q, df = 1, lower.tail = FALSE)      # P-value for heterogeneity
+  )
+
+# Optional: Filter SNPs with significant heterogeneity
+significant_heterogeneity <- heterogeneity_results %>%
+  filter(pval_heterogeneity < 0.05)  # Adjust threshold as needed
+
+# Save heterogeneity results
+write.table(heterogeneity_results, "heterogeneity_results.txt", row.names = FALSE, quote = FALSE, sep = "\t")
+write.table(significant_heterogeneity, "significant_heterogeneity_snps.txt", row.names = FALSE, quote = FALSE, sep = "\t")
+
+# Summary
+cat("Heterogeneity analysis complete. Summary of p-values for heterogeneity:\n")
+summary(heterogeneity_results$pval_heterogeneity)

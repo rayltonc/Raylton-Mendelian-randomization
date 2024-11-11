@@ -1,6 +1,3 @@
-
-
-
 Script in directory: Vectors_Qstats.R  
 
 # Load necessary libraries
@@ -9,17 +6,37 @@ library(dplyr)
 library(data.table)
 library(ggplot2)
 
-# Define fixed-effects meta-analysis function
 fixed_effects_meta_analysis <- function(beta_vec, se_vec) {
-    w <- 1 / se_vec^2
-    beta <- sum(beta_vec * w) / sum(w)
-    se <- sqrt(1 / sum(w))
-    pval <- pnorm(abs(beta / se), lower.tail = FALSE) * 2  # Two-tailed p-value
+    w <- 1 / se_vec^2  # Weights based on standard errors
+    beta <- sum(beta_vec * w) / sum(w)  # Combined estimate (weighted average)
+    se <- sqrt(1 / sum(w))  # Standard error of the combined estimate
+    pval <- pnorm(abs(beta / se), lower.tail = FALSE) * 2  # Two-tailed p-value for combined estimate
     Qj <- w * (beta - beta_vec)^2  # Per-population heterogeneity contributions
-    Q <- sum(Qj)  # Cochran's Q statistic
-    Qdf <- length(beta_vec) - 1
-    Qjpval <- pchisq(Qj, 1, lower.tail = FALSE)  # P-values for individual contributions
+    Q <- sum(Qj)  # Cochran's Q statistic for overall heterogeneity
+    Qdf <- length(beta_vec) - 1  # Degrees of freedom for Cochran's Q test
+    Qjpval <- pchisq(Qj, 1, lower.tail = FALSE)  # P-values for individual contributions to heterogeneity
     Qpval <- pchisq(Q, Qdf, lower.tail = FALSE)  # Overall heterogeneity p-value
     
-    return(list(beta = beta, se = se, Qpval = Qpval, Qj = Qj, Qjpval = Qjpval))
+    return(list(beta = beta, se = se, pval = pval, Qpval = Qpval, Qj = Qj, Qjpval = Qjpval))
+}
+
+# Heterogeneity Test for Effect Estimates Between Populations
+heterogeneity_test <- function(sslist) {
+    b <- lapply(sslist, \(x) x$bhat) %>% bind_cols()
+    se <- lapply(sslist, \(x) x$se) %>% bind_cols()
+    
+    # Perform fixed-effects meta-analysis and heterogeneity test for each SNP
+    o <- lapply(1:nrow(b), \(i) {
+        fixed_effects_meta_analysis(as.numeric(b[i, ]), as.numeric(se[i, ]))
+    })
+    
+    # Extract results
+    Q <- tibble(snp = sslist[[1]]$snp, Qpval = sapply(o, \(x) x$Qpval))
+    Qj <- lapply(o, \(x) x$Qjpval) %>% 
+        do.call(rbind, .) %>% 
+        as_tibble() %>%
+        rename_with(~ names(sslist), everything()) %>%
+        mutate(snp = sslist[[1]]$snp)
+    
+    return(list(Q = Q, Qj = Qj))
 }

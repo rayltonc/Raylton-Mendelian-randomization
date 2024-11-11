@@ -1,0 +1,25 @@
+
+
+
+Script in directory: Vectors_Qstats.R  
+
+# Load necessary libraries
+library(meta)
+library(dplyr)
+library(data.table)
+library(ggplot2)
+
+# Define fixed-effects meta-analysis function
+fixed_effects_meta_analysis <- function(beta_vec, se_vec) {
+    w <- 1 / se_vec^2
+    beta <- sum(beta_vec * w) / sum(w)
+    se <- sqrt(1 / sum(w))
+    pval <- pnorm(abs(beta / se), lower.tail = FALSE) * 2  # Two-tailed p-value
+    Qj <- w * (beta - beta_vec)^2  # Per-population heterogeneity contributions
+    Q <- sum(Qj)  # Cochran's Q statistic
+    Qdf <- length(beta_vec) - 1
+    Qjpval <- pchisq(Qj, 1, lower.tail = FALSE)  # P-values for individual contributions
+    Qpval <- pchisq(Q, Qdf, lower.tail = FALSE)  # Overall heterogeneity p-value
+    
+    return(list(beta = beta, se = se, Qpval = Qpval, Qj = Qj, Qjpval = Qjpval))
+}

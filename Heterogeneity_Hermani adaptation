@@ -1,0 +1,66 @@
+
+# Load libraries
+library(meta)
+library(dplyr)
+library(data.table)
+library(ggplot2)
+
+# Define sslist before calling heterogeneity_test for AWIGen and GIANT
+sslist <- list(
+  AWIGen = ldc_meta_analysed %>% select(snp = rsid, bhat = bhat.awigen, se = se.awigen),
+  GIANT = ldc_meta_analysed %>% select(snp = rsid, bhat = bhat.giant, se = se.giant)
+)
+
+# Apply heterogeneity test
+results <- heterogeneity_test(sslist)
+
+# Apply Bonferroni correction for 103 SNPs
+bonferroni_threshold <- 0.05 / 103  # Adjusted p-value threshold
+
+# Filter SNPs with significant heterogeneity after Bonferroni correction
+significant_heterogeneity <- results$Q %>%
+  filter(Qpval < bonferroni_threshold)
+
+# Save heterogeneity results
+write.table(results$Q, "heterogeneity_results.txt", row.names = FALSE, quote = FALSE, sep = "\t")
+write.table(significant_heterogeneity, "significant_heterogeneity_snps.txt", row.names = FALSE, quote = FALSE, sep = "\t")
+
+# Summary of p-values
+summary(results$Q$Qpval)
+
+# Create the plot (heterogeneity for each SNP)
+plot <- ggplot(significant_heterogeneity, aes(x = snp, y = -log10(Qpval))) +
+  geom_point() +
+  geom_hline(yintercept = -log10(0.05 / nrow(significant_heterogeneity)))
+
+# save plot to a PDF file
+ggsave("significant_heterogeneity_plot.pdf", plot = plot, width = 8, height = 6)
+
+#contribution of each population to the heterogeneity of each SNP
+plot2 <-gather(as.data.frame(significant_heterogeneity), "key", "value", -snp) %>%
+ggplot(., aes(x=snp, y=-log10(value))) +
+geom_point(aes(colour=key)) +
+scale_colour_brewer(type="qual")
+
+# save plot to a PDF file
+ggsave("significant_heterogeneity_plot2.pdf", plot = plot2, width = 8, height = 6)
+
+##the per-population estimates for the SNPs that have some heterogeneity
+# Generate the forest plot
+forest_plot <- ggplot(plot_data, aes(x = bhat, y = pop)) +
+  geom_point(aes(colour = pop), size = 3) +
+  geom_errorbarh(aes(xmin = bhat - se * 1.96, xmax = bhat + se * 1.96, colour = pop), height = 0.2) +
+  facet_grid(snp ~ ., scales = "free_y", space = "free_y") +  # Facet by SNP with free y space
+  geom_vline(xintercept = 0, linetype = "dotted", color = "grey") +
+  labs(
+    title = "Forest Plot of Effect Sizes by Population (Significant Heterogeneity)",
+    x = "Effect Size (bhat)",
+    y = "Population"
+  ) +
+  theme_minimal() +
+  theme(
+    legend.position = "bottom",
+    strip.text.y = element_text(angle = 0)  # Horizontal SNP labels
+  )
+# save plot to a PDF file
+ggsave("Forest_plot.pdf", plot = forest_plot, width = 8, height = 6)

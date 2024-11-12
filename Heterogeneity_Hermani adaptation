@@ -36,6 +36,32 @@ plot <- ggplot(significant_heterogeneity, aes(x = snp, y = -log10(Qpval))) +
 # save plot to a PDF file
 ggsave("significant_heterogeneity_plot.pdf", plot = plot, width = 8, height = 6)
 
+
+
+# Create the plot for each SNP)
+
+plotA <- ggplot(results, aes(x = Q.snp, y = -log10(Q.Qpval))) +
+  geom_point() +
+  geom_hline(yintercept = -log10(0.05 / nrow(results)))
+
+# save plot to a PDF file
+ggsave("Heterogeneity_plot.pdf", plot = plotA, width = 8, height = 6)
+
+
+plotB <- ggplot(results, aes(x = Q.snp, y = -log10(Q.Qpval))) +
+  geom_point(aes(colour = Qj.AWIGen)) +  # Color by Qj.AWIGen
+  scale_colour_gradient(low = "blue", high = "red")
+
+results$Qj.AWIGen <- factor(results$Qj.AWIGen)
+
+plotB <-ggplot(results, aes(x = Q.snp, y = -log10(Q.Qpval))) +
+  geom_point(aes(colour = Qj.AWIGen)) +  # Color by Qj.AWIGen (now categorical)
+  scale_colour_brewer(type = "qual")  # Qualitative color scale
+
+
+# save plot to a PDF file
+ggsave("heterogeneity_plotB.pdf", plot = plotB, width = 8, height = 6)
+
 #contribution of each population to the heterogeneity of each SNP
 plot2 <-gather(as.data.frame(significant_heterogeneity), "key", "value", -snp) %>%
 ggplot(., aes(x=snp, y=-log10(value))) +
@@ -64,3 +90,39 @@ forest_plot <- ggplot(plot_data, aes(x = bhat, y = pop)) +
   )
 # save plot to a PDF file
 ggsave("Forest_plot.pdf", plot = forest_plot, width = 8, height = 6)
+
+
+12/11/2024
+
+# Load necessary libraries
+library(tidyverse)
+
+# Reshape the data so that the two populations (Qj.AWIGen and Qj.GIANT) are in a new 'population' column
+plot_data <- pivot_longer(
+  as.data.frame(results), 
+  cols = c(Qj.AWIGen, Qj.GIANT), 
+  names_to = "population", 
+  values_to = "value"
+)
+
+# Check the structure of reshaped data
+head(plot_data)
+
+# Create the plot, with coloring by population (Qj.AWIGen vs Qj.GIANT)
+plotB <- ggplot(plot_data, aes(x = Q.snp, y = -log10(value))) +
+  geom_point(aes(colour = population)) +  # Color by population (AWIGen vs GIANT)
+  scale_colour_manual(values = c("blue", "red")) +  # Manually set the colors for the two populations
+  labs(
+    title = "Heterogeneity by SNP and P-value",
+    x = "SNP",
+    y = expression(-log[10](p-value)),
+    colour = "Population"
+  ) +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(angle = 90, hjust = 1)  # Rotate x-axis labels for clarity
+  )
+
+# Save the plot
+ggsave("Heterogeneity_PlotB.pdf", plot = plotB, width = 10, height = 6)
+

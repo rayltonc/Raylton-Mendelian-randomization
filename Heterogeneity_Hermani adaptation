@@ -126,3 +126,24 @@ plotB <- ggplot(plot_data, aes(x = Q.snp, y = -log10(value))) +
 # Save the plot
 ggsave("Heterogeneity_PlotB.pdf", plot = plotB, width = 10, height = 6)
 
+plotB <- ggplot(plot_data, aes(x = Q.snp, y = -log10(value))) +
+  geom_point(aes(colour = population)) +  # Color by population (AWIGen vs GIANT)
+  scale_colour_manual(values = c("blue", "red")) +  # Manually set the colors for the two populations
+  labs(
+    title = "Heterogeneity by SNP and P-value",
+    x = "SNP",
+    y = expression(-log[10](p-value)),
+    colour = "Population"
+  ) +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(angle = 90, hjust = 1)  # Rotate x-axis labels for clarity
+  ) +
+  geom_hline(
+    yintercept = -log10(0.05 / nrow(results)),  # Bonferroni threshold line
+    linetype = "dashed",
+    color = "grey"
+  )
+
+# Save the plot
+ggsave("Heterogeneity_PlotB1.pdf", plot = plotB, width = 10, height = 6)

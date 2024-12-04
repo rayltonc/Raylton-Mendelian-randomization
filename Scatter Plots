@@ -1,0 +1,33 @@
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+
+# Reshape the data to wide format
+plot_data_wide <- plot_data %>%
+  pivot_wider(
+    names_from = population,
+    values_from = value
+  ) %>%
+  mutate(
+    logPval.AWIGen = -log10(Qj.AWIGen),  # Replace with actual column name
+    logPval.GIANT = -log10(Qj.GIANT)     # Replace with actual column name
+  )
+
+# Create scatter plot
+scatter_plot <- ggplot(plot_data_wide, aes(x = logPval.AWIGen, y = logPval.GIANT)) +
+  geom_point(color = "darkblue", size = 3, alpha = 0.6) +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "grey") +
+  labs(
+    title = "Comparison of Q.Qpval Between AWIGen and GIANT",
+    x = expression(-log[10](Q[Qpval])~"for AWIGen"),
+    y = expression(-log[10](Q[Qpval])~"for GIANT")
+  ) +
+  theme_minimal()
+
+# Save plot as PDF
+pdf("heterogeneity_scatter_awigen_giant.pdf", width = 8, height = 6)
+print(scatter_plot)
+dev.off()
+
+print("Plot saved as heterogeneity_scatter_awigen_giant.pdf")
+

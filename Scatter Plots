@@ -1,33 +1,48 @@
 library(ggplot2)
+library(scales)
 library(dplyr)
-library(tidyr)
 
-# Reshape the data to wide format
-plot_data_wide <- plot_data %>%
-  pivot_wider(
-    names_from = population,
-    values_from = value
-  ) %>%
-  mutate(
-    logPval.AWIGen = -log10(Qj.AWIGen),  # Replace with actual column name
-    logPval.GIANT = -log10(Qj.GIANT)     # Replace with actual column name
-  )
+# Define output file
+output_file <- "scatter_plot_bhat_awigen_vs_bhat_giant_ticks_two_decimal_colored.pdf"
 
-# Create scatter plot
-scatter_plot <- ggplot(plot_data_wide, aes(x = logPval.AWIGen, y = logPval.GIANT)) +
-  geom_point(color = "darkblue", size = 3, alpha = 0.6) +
-  geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "grey") +
+# New column for point color based on the p-value threshold
+ldc_meta_analysed <- ldc_meta_analysed %>%
+  mutate(point_color = case_when(
+    pval > 1.108e-10 ~ "grey",  # If any p-value is above the threshold, color grey
+    TRUE ~ "blue"  # Otherwise, color blue
+  ))
+
+# Open PDF device
+pdf(output_file, width = 8, height = 6)
+
+# Create scatter plot with customized ticks and two decimal places on both axes
+plot <- ggplot(ldc_meta_analysed, aes(x = bhat.awigen, y = bhat.giant, color = point_color)) +
+  geom_point(alpha = 0.7) +  # Scatter plot points
+  geom_smooth(data = subset(ldc_meta_analysed, point_color == "blue"), 
+              aes(x = bhat.awigen, y = bhat.giant), 
+              method = "lm", color = "blue", se = FALSE) +  # Regression line for blue points
+  geom_smooth(data = subset(ldc_meta_analysed, point_color == "grey"), 
+              aes(x = bhat.awigen, y = bhat.giant), 
+              method = "lm", color = "grey", se = FALSE) +  # Regression line for grey points
   labs(
-    title = "Comparison of Q.Qpval Between AWIGen and GIANT",
-    x = expression(-log[10](Q[Qpval])~"for AWIGen"),
-    y = expression(-log[10](Q[Qpval])~"for GIANT")
+    title = "Scatter Plot of bhat.awigen vs bhat.giant",
+    x = "bhat.awigen",
+    y = "bhat.giant"
   ) +
-  theme_minimal()
+  theme_minimal(base_size = 14) +
+  theme(
+    panel.grid = element_blank(),  # Remove gridlines
+    axis.line = element_line(color = "black", size = 0.5, linetype = "solid"),  # Solid axis lines
+    axis.ticks = element_line(color = "black", size = 0.5),  # Small ticks
+    axis.ticks.length = unit(0.2, "cm")  # Length of the ticks
+  ) +
+  scale_x_continuous(labels = scales::number_format(accuracy = 0.01)) +  # Two decimal places for x-axis
+  scale_y_continuous(labels = scales::number_format(accuracy = 0.01)) +  # Two decimal places for y-axis
+  scale_color_manual(values = c("blue" = "blue", "grey" = "grey"))  # Set color mapping
 
-# Save plot as PDF
-pdf("heterogeneity_scatter_awigen_giant.pdf", width = 8, height = 6)
-print(scatter_plot)
+# Print the plot
+print(plot)
+
+# Close PDF device
 dev.off()
-
-print("Plot saved as heterogeneity_scatter_awigen_giant.pdf")
 

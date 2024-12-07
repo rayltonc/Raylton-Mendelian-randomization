@@ -2,7 +2,17 @@ library(ggplot2)
 library(scales)
 library(dplyr)
 
-# Add a new column for color categorization
+# Count SNPs based on Cochran's Q p-values
+non_significant_snps <- sum(merged_data$Qpval > 0.05)
+significant_snps <- sum(merged_data$Qpval <= 0.05 & merged_data$Qpval > 1.1e-4)
+bonferroni_significant_snps <- sum(merged_data$Qpval <= 1.1e-4)
+
+# Print the counts for clarity
+cat("Non-significant SNPs (Qpval > 0.05): ", non_significant_snps, "\n")
+cat("Significant SNPs (0.05 < Qpval <= 1.1e-4): ", significant_snps, "\n")
+cat("Bonferroni Significant SNPs (Qpval <= 1.1e-4): ", bonferroni_significant_snps, "\n")
+
+# Add a new column for color categorization based on Cochran's Q p-value
 merged_data$Q_category <- with(merged_data, ifelse(Qpval > 0.05, "Non-significant",
                                 ifelse(Qpval <= 1.1e-4, "Bonferroni Significant", 
                                                        "Significant")))
@@ -26,7 +36,14 @@ plot <- ggplot(merged_data, aes(x = bhat.awigen, y = bhat.giant, color = Q_categ
   labs(
     title = "Comparison of Beta Estimates: AWI-GEN vs GIANT",
     subtitle = "Colored by Cochran's Q p-value categories with regression lines",
-    caption = "Red points and line: 1.1e-4 < Qpval <= 0.05\nBlue points and line: Qpval <= 1.1e-4\nGrey points: Qpval > 0.05",
+    caption = paste(
+      "Red points and line: 1.1e-4 < Qpval <= 0.05\n",
+      "Blue points and line: Qpval <= 1.1e-4\n",
+      "Grey points: Qpval > 0.05\n",
+      "Non-significant SNPs: ", non_significant_snps, "\n",
+      "Significant SNPs: ", significant_snps, "\n",
+      "Bonferroni Significant SNPs: ", bonferroni_significant_snps
+    ),
     x = "AFR (AWI-GEN) Beta",  # New label for x-axis
     y = "EUR (GIANT) Beta"  # New label for y-axis
   ) +
@@ -43,7 +60,7 @@ plot <- ggplot(merged_data, aes(x = bhat.awigen, y = bhat.giant, color = Q_categ
   scale_y_continuous(labels = number_format(accuracy = 0.01))  # Format y-axis to two decimal places
 
 # Save the plot as a PDF
-ggsave("scatter_plot_with_two_regression_lines.pdf", 
+ggsave("scatter_plot_with_cochrans_q_pvalue_categories.pdf", 
        plot = plot, 
        width = 8, 
        height = 6)

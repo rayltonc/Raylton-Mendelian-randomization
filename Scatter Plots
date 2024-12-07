@@ -2,47 +2,53 @@ library(ggplot2)
 library(scales)
 library(dplyr)
 
-# Define output file
-output_file <- "scatter_plot_bhat_awigen_vs_bhat_giant_ticks_two_decimal_colored.pdf"
+# Add a new column for color categorization
+merged_data$Q_category <- with(merged_data, ifelse(Qpval > 0.05, "Non-significant",
+                                ifelse(Qpval <= 1.1e-4, "Bonferroni Significant", 
+                                                       "Significant")))
 
-# New column for point color based on the p-value threshold
-ldc_meta_analysed <- ldc_meta_analysed %>%
-  mutate(point_color = case_when(
-    pval > 1.108e-10 ~ "grey",  # If any p-value is above the threshold, color grey
-    TRUE ~ "blue"  # Otherwise, color blue
-  ))
-
-# Open PDF device
-pdf(output_file, width = 8, height = 6)
-
-# Create scatter plot with customized ticks and two decimal places on both axes
-plot <- ggplot(ldc_meta_analysed, aes(x = bhat.awigen, y = bhat.giant, color = point_color)) +
-  geom_point(alpha = 0.7) +  # Scatter plot points
-  geom_smooth(data = subset(ldc_meta_analysed, point_color == "blue"), 
+# Create the scatter plot with three color categories
+plot <- ggplot(merged_data, aes(x = bhat.awigen, y = bhat.giant, color = Q_category)) +
+  geom_point(size = 3, alpha = 0.7) +  # Adjusted point size and transparency
+  scale_color_manual(values = c(
+    "Non-significant" = "grey", 
+    "Significant" = "red", 
+    "Bonferroni Significant" = "blue"  # Blue for Bonferroni
+  )) +
+  # Add regression line for Significant SNPs
+  geom_smooth(data = merged_data[merged_data$Q_category == "Significant", ], 
               aes(x = bhat.awigen, y = bhat.giant), 
-              method = "lm", color = "blue", se = FALSE) +  # Regression line for blue points
-  geom_smooth(data = subset(ldc_meta_analysed, point_color == "grey"), 
+              method = "lm", se = FALSE, color = "red", linetype = "solid") +
+  # Add regression line for Bonferroni Significant SNPs
+  geom_smooth(data = merged_data[merged_data$Q_category == "Bonferroni Significant", ], 
               aes(x = bhat.awigen, y = bhat.giant), 
-              method = "lm", color = "grey", se = FALSE) +  # Regression line for grey points
+              method = "lm", se = FALSE, color = "blue", linetype = "solid") +
   labs(
-    title = "Scatter Plot of bhat.awigen vs bhat.giant",
-    x = "bhat.awigen",
-    y = "bhat.giant"
+    title = "Comparison of Beta Estimates: AWI-GEN vs GIANT",
+    subtitle = "Colored by Cochran's Q p-value categories with regression lines",
+    caption = "Red points and line: 1.1e-4 < Qpval <= 0.05\nBlue points and line: Qpval <= 1.1e-4\nGrey points: Qpval > 0.05",
+    x = "AFR (AWI-GEN) Beta",  # New label for x-axis
+    y = "EUR (GIANT) Beta"  # New label for y-axis
   ) +
   theme_minimal(base_size = 14) +
   theme(
     panel.grid = element_blank(),  # Remove gridlines
-    axis.line = element_line(color = "black", size = 0.5, linetype = "solid"),  # Solid axis lines
-    axis.ticks = element_line(color = "black", size = 0.5),  # Small ticks
+    axis.line = element_line(color = "black", linewidth = 0.5, linetype = "solid"),  # Solid axis lines
+    axis.ticks = element_line(color = "black", linewidth = 0.5),  # Small ticks
     axis.ticks.length = unit(0.2, "cm")  # Length of the ticks
   ) +
-  scale_x_continuous(labels = scales::number_format(accuracy = 0.01)) +  # Two decimal places for x-axis
-  scale_y_continuous(labels = scales::number_format(accuracy = 0.01)) +  # Two decimal places for y-axis
-  scale_color_manual(values = c("blue" = "blue", "grey" = "grey"))  # Set color mapping
+  scale_x_continuous(breaks = seq(-0.3, 0.1, 0.05), limits = c(-0.3, 0.1)) +  # Custom x-axis breaks and limits
+  scale_y_continuous(breaks = seq(0.01, 0.11, 0.01), limits = c(0.01, 0.11)) +  # Custom y-axis breaks and limits
+  scale_x_continuous(labels = number_format(accuracy = 0.01)) +  # Format x-axis to two decimal places
+  scale_y_continuous(labels = number_format(accuracy = 0.01))  # Format y-axis to two decimal places
 
-# Print the plot
+# Save the plot as a PDF
+ggsave("scatter_plot_with_two_regression_lines.pdf", 
+       plot = plot, 
+       width = 8, 
+       height = 6)
+
+# Display plot to check
 print(plot)
 
-# Close PDF device
-dev.off()
 

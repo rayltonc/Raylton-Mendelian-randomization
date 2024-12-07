@@ -1,0 +1,94 @@
+# Load the dplyr package
+library(dplyr)
+
+# Define a list of datasets and their corresponding columns
+varlist <- list(
+  AWIGen = list(bhat = "bhat.awigen", se = "se.awigen"),
+  GIANT = list(bhat = "bhat.giant", se = "se.giant")
+)
+
+# List of columns to retain for each dataset
+awigen_columns <- c(
+  "rsid.awigen", "pval.awigen", "bhat.awigen", "se.awigen", "af.awigen",
+  "N.awigen", "chr", "bp"
+)
+
+giant_columns <- c(
+  "pval.giant", "bhat.giant", "se.giant"
+)
+
+# Dynamically create the sslist including only the specified columns
+sslist <- lapply(names(varlist), function(dataset) {
+  if (dataset == "AWIGen") {
+    ldc_meta_analysed %>%
+      select(
+        snp = rsid,
+        all_of(awigen_columns)  # Only retain AWIGen columns
+      )
+  } else {
+    ldc_meta_analysed %>%
+      select(
+        snp = rsid,
+        all_of(giant_columns)  # Only retain GIANT columns
+      )
+  }
+})
+
+# Check the columns in sslist to verify the structure
+lapply(sslist, colnames)
+
+# Example of merging AWIGen and GIANT data by 'snp'
+combined_data <- left_join(sslist[[1]], sslist[[2]], by = "snp")
+
+# Check the resulting dataset
+head(combined_data)
+
+
+#########################################################################################################################
+merge combined data and results data frames
+#########################################################################################################################
+# Load necessary library
+library(dplyr)
+
+# Merge the two datasets based on the 'snp' column
+merged_data <- combined_data %>%
+  left_join(results$Q, by = "snp") %>%
+  left_join(results$Qj, by = "snp") %>%
+  # Optionally, create a column to categorize p-values into significant or non-significant
+  mutate(Q_threshold = case_when(
+    Qpval < 0.05 ~ "Significant",
+    TRUE ~ "Non-significant"
+  ))
+
+# Check the first few rows of the merged data
+head(merged_data)
+
+###########################################################################################################################
+Scatter plots
+###########################################################################################################################
+library(scales)  # For number formatting
+
+# Create the plot with manually defined axis limits and formatted axis labels
+plot <- ggplot(merged_data, aes(x = bhat.awigen, y = bhat.giant, color = Q_threshold)) +
+  geom_point() +
+  scale_color_manual(values = c("Significant" = "red", "Non-significant" = "blue")) +
+  labs(title = "Scatter Plot of Beta Estimates by Cochran's Q p-value",
+       x = "AWI-GEN Beta Estimate",
+       y = "GIANT Beta Estimate",
+       color = "Cochran's Q p-value Significance") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  scale_x_continuous(limits = c(-0.3004280, 0.0824314), 
+                     labels = number_format(accuracy = 0.01)) +  # Format x-axis to two decimal places
+  scale_y_continuous(limits = c(0.0112, 0.1063), 
+                     labels = number_format(accuracy = 0.01))    # Format y-axis to two decimal places
+
+# Save the plot as a PDF
+ggsave("scatter_plot_beta_estimates.pdf", plot = plot, width = 8, height = 6)
+
+# Count the number of SNPs with Cochran's Q p-value <= 0.05
+num_heterogeneity <- sum(merged_data$Qpval <= 0.05)
+
+# Print the result
+print(paste("Number of SNPs showing heterogeneity (p <= 0.05):", num_heterogeneity))
+

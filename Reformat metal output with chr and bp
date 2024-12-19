@@ -13,10 +13,9 @@ library(tidyr)
 meta_analysed <- meta_analysed %>%
   separate(chrbp, into = c("chr", "bp"), sep = ":")
 
-rename Markername to rsid
-meta_analysed <- meta_analysed %>%rename(rsid = MarkerName)
+rename Markername to rsid.giant
 
-meta_analysed <- meta_analysed %>%rename(rsid.giant = rsid)
+meta_analysed <- meta_analysed %>%rename(rsid.giant = MarkerName)
 
 rename P.value to pval
 meta_analysed <- meta_analysed %>%

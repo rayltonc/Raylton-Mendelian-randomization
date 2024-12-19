@@ -12,9 +12,20 @@ meta_analysed <- meta_analysed %>%
   separate(chrbp, into = c("chr", "bp"), sep = ":")
 
 rename Markername to rsid
-meta_analysed <- meta_analysed %>%
-  rename(rsid = MarkerName)
+meta_analysed <- meta_analysed %>%rename(rsid = MarkerName)
+
+meta_analysed <- meta_analysed %>%rename(rsid.giant = rsid)
 
 rename P.value to pval
 meta_analysed <- meta_analysed %>%
   rename( pval= P.value)
+
+# Perform an inner join to keep only the rows with matching rsid.giant values
+merged_data <- mergeboth %>%
+  select(-matches(colnames(meta_analysed))) %>%  # Exclude overlapping columns from mergeboth
+  inner_join(meta_analysed, by = "rsid.giant")    # Inner join to keep only matched rows
+
+
+
+
+

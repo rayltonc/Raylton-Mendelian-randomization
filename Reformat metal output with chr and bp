@@ -2,6 +2,8 @@
 library(dplyr)
 library(data.table)
 
+meta_analysis_2 <- read.table("meta_analysis_2.tbl", header = TRUE, sep = "\t")
+
 ## Separate 'chr_bp' into 'chr' and 'bp' using tidyr's separate function
 install.packages("tidyr")
 library(tidyr) 

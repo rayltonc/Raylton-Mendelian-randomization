@@ -30,8 +30,10 @@ library(tidyr)
 merged_data <- merged_data %>%separate(chrbp, into = c("chr", "bp"), sep = ":")
 
 
-rename P.value to pval
-merged_data <- merged_data %>%rename( pval= P.value)
+rename P-value to pval
+
+merged_data <- merged_data %>%rename(pval = `P-value`)
+
 
 
 

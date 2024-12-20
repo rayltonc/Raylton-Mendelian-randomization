@@ -33,6 +33,9 @@ plot <- ggplot(merged_data, aes(x = bhat.awigen, y = bhat.giant, color = Q_categ
   geom_smooth(data = merged_data[merged_data$Q_category == "Bonferroni Significant", ], 
               aes(x = bhat.awigen, y = bhat.giant), 
               method = "lm", se = FALSE, color = "blue", linetype = "solid") +
+  # Add vertical and horizontal dotted lines at x = 0 and y = 0
+  geom_vline(xintercept = 0, linetype = "dotted", color = "black") +
+  geom_hline(yintercept = 0, linetype = "dotted", color = "black") +
   labs(
     title = "Comparison of Beta Estimates: AWI-GEN vs GIANT",
     subtitle = "Colored by Cochran's Q p-value categories with regression lines",
@@ -64,6 +67,10 @@ ggsave("scatter_plot_with_cochrans_q_pvalue_categories.pdf",
        plot = plot, 
        width = 8, 
        height = 6)
+
+# Display plot to check
+print(plot)
+
 
 # Display plot to check
 print(plot)

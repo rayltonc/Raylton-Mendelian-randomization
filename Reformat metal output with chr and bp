@@ -2,7 +2,24 @@
 library(dplyr)
 library(data.table)
 
-meta_analysis_2 <- read.table("meta_analysis_2.tbl", header = TRUE, sep = "\t")
+meta_analysis_2 <- fread("meta_analysis_2.tbl", header = TRUE, sep = "\t")
+
+mergeboth<- fread("~/genetic/mergeboth.txt", header = TRUE, sep = "\t")
+
+library(dplyr)
+
+# Step 1: Rename the corresponding column in mergeboth to "MarkerName"
+# This ensures the column names match for the merge.
+mergeboth <- mergeboth %>%
+  rename(MarkerName = rsid.giant)  # Adjust if another column corresponds to MarkerName
+
+# Step 2: Merge using "MarkerName" as the key
+# Ensure that overlapping columns from meta_analysis_2 overwrite those in mergeboth.
+merged_data <- meta_analysis_2 %>%
+  full_join(mergeboth, by = "MarkerName") %>%
+  select(-ends_with(".y")) %>%  # Remove duplicate columns from mergeboth
+  rename_with(~ gsub(".x$", "", .), ends_with(".x"))  # Remove ".x" suffix from column names
+
 
 ## Separate 'chr_bp' into 'chr' and 'bp' using tidyr's separate function
 install.packages("tidyr")
@@ -10,21 +27,12 @@ library(tidyr)
 
 ##reformat for ld clumping
 #separate chrbp 
-meta_analysed <- meta_analysed %>%
-  separate(chrbp, into = c("chr", "bp"), sep = ":")
+merged_data <- merged_data %>%separate(chrbp, into = c("chr", "bp"), sep = ":")
 
-rename Markername to rsid.giant
-
-meta_analysed <- meta_analysed %>%rename(rsid.giant = MarkerName)
 
 rename P.value to pval
-meta_analysed <- meta_analysed %>%
-  rename( pval= P.value)
+merged_data <- merged_data %>%rename( pval= P.value)
 
-# Perform an inner join to keep only the rows with matching rsid.giant values
-merged_data <- mergeboth %>%
-  select(-matches(colnames(meta_analysed))) %>%  # Exclude overlapping columns from mergeboth
-  inner_join(meta_analysed, by = "rsid.giant")    # Inner join to keep only matched rows
 
 
 

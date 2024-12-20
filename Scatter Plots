@@ -76,3 +76,87 @@ print(plot)
 print(plot)
 
 
+#######################################################################################################################
+METAL PLOT
+#######################################################################################################################
+> merged_data <- ldc_meta_analysed
+> non_significant_snps <- sum(merged_data$HetPVal > 0.05)
+
+> significant_snps <- sum(merged_data$HetPVal <= 0.05 & merged_data$HetPVal > 1.1e-4)
+
+>  bonferroni_significant_snps <- sum(merged_data$HetPVal <= 1.1e-4)
+
+> cat("Non-significant SNPs (HetPVal > 0.05): ", non_significant_snps, "\n")
+Non-significant SNPs (HetPVal > 0.05):  408
+
+> cat("Significant SNPs (0.05 < HetPVal <= 1.1e-4): ", significant_snps, "\n")
+Significant SNPs (0.05 < HetPVal <= 1.1e-4):  34
+
+> cat("Bonferroni Significant SNPs (HetPVal <= 1.1e-4): ", bonferroni_significant_snps, "\n")
+Bonferroni Significant SNPs (HetPVal <= 1.1e-4):  0
+
+> merged_data$Het_category <- with(merged_data, ifelse(HetPVal > 0.05, "Non-significant",
++ +                                                    ifelse(HetPVal <= 1.1e-4, "Bonferroni Significant",
++                                                           "Significant")))
+
+# Create Q_category based on HetPVal
+merged_data$Q_category <- ifelse(merged_data$HetPVal <= 1.1e-4, "Bonferroni Significant",
+                                 ifelse(merged_data$HetPVal <= 0.05, "Significant", "Non-significant"))
+
+# Now, use Q_category in the plot
+plot <- ggplot(merged_data, aes(x = bhat.awigen, y = bhat.giant, color = Q_category)) +
+  geom_point(size = 3, alpha = 0.7) +  # Adjusted point size and transparency
+  scale_color_manual(values = c(
+    "Non-significant" = "grey", 
+    "Significant" = "red", 
+    "Bonferroni Significant" = "blue"  # Blue for Bonferroni
+  )) +
+  # Add regression line for Significant SNPs
+  geom_smooth(data = merged_data[merged_data$Q_category == "Significant", ], 
+              aes(x = bhat.awigen, y = bhat.giant), 
+              method = "lm", se = FALSE, color = "red", linetype = "solid") +
+  # Add regression line for Bonferroni Significant SNPs
+  geom_smooth(data = merged_data[merged_data$Q_category == "Bonferroni Significant", ], 
+              aes(x = bhat.awigen, y = bhat.giant), 
+              method = "lm", se = FALSE, color = "blue", linetype = "solid") +
+  # Add vertical and horizontal dotted lines at x = 0 and y = 0
+  geom_vline(xintercept = 0, linetype = "dotted", color = "black") +  # Vertical line at x = 0
+  geom_hline(yintercept = 0, linetype = "dotted", color = "black") +  # Horizontal line at y = 0
+  labs(
+    title = "Comparison of Beta Estimates: AWI-GEN vs GIANT",
+    subtitle = "Colored by Cochran's Q p-value categories with regression lines",
+    caption = paste(
+      "Red points and line: 1.1e-4 < HetPVal <= 0.05\n",
+      "Blue points and line: HetPVal <= 1.1e-4\n",
+      "Grey points: HetPVal > 0.05\n",
+      "Non-significant SNPs: ", non_significant_snps, "\n",
+      "Significant SNPs: ", significant_snps, "\n",
+      "Bonferroni Significant SNPs: ", bonferroni_significant_snps
+    ),
+    x = "AFR (AWI-GEN) Beta",  # New label for x-axis
+    y = "EUR (GIANT) Beta"  # New label for y-axis
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(
+    panel.grid = element_blank(),  # Remove gridlines
+    axis.line = element_line(color = "black", linewidth = 0.5, linetype = "solid"),  # Solid axis lines
+    axis.ticks = element_line(color = "black", linewidth = 0.5),  # Small ticks
+    axis.ticks.length = unit(0.2, "cm")  # Length of the ticks
+  ) +
+  scale_x_continuous(breaks = seq(-0.3, 0.1, 0.05), limits = c(-0.3, 0.1)) +  # Custom x-axis breaks and limits
+  scale_y_continuous(breaks = seq(0.01, 0.11, 0.01), limits = c(0.01, 0.11)) +  # Custom y-axis breaks and limits
+  scale_x_continuous(labels = number_format(accuracy = 0.01)) +  # Format x-axis to two decimal places
+  scale_y_continuous(labels = number_format(accuracy = 0.01))  # Format y-axis to two decimal places
+
+# Save the plot as a PDF
+ggsave("scatter_plot_with_cochrans_q_pvalue_categories.pdf", 
+       plot = plot, 
+       width = 8, 
+       height = 6)
+
+# Display plot to check
+print(plot)
+
+
+
+

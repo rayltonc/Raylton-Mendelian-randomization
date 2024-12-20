@@ -4,25 +4,28 @@ library(tidyr)
 
 ##reformat for ld clumping
 rename Markername to rsid
-meta_analysed <- meta_analysis_2 %>% rename(rsid = MarkerName)
+significant_meta_snps <- significant_meta_snps %>% rename(rsid = MarkerName)
 
 rename P.value to pval
-meta_analysed <- meta_analysed %>%rename( pval= P.value)
+merged_data <-merged_data %>%rename( pval= P.value)
 
 # Filter SNPs by genome-wide significance threshold (p-value < 5e-08)
-significant_meta_snps <- subset(meta_analysed, pval < 5e-08)
+significant_meta_snps <- subset(merged_data, pval < 5e-08)
+
+significant_meta_snps <- significant_meta_snps %>%
++   separate(rsid, into = c("rsid", "alleles"), sep = ":", remove = FALSE)  # Keeps the original 'rsid' column as well
 
 remotes::install_github('MRCIEU/gwasvcf')
 library(ieugwasr)
 
 ldc_meta_analysed <- ld_clump(
   dat = significant_meta_snps,
-  plink_bin = "/home/raylton/R/x86_64-redhat-linux-gnu-library/4.4/genetics.binaRies/bin/plink",
-  bfile = "/home/raylton/AFR_EUR_combined_flipped-merge",
-  clump_kb = 10000,    
+ plink_bin = "/home/raylton/genetic/plink",
+bfile = "/home/raylton/genetic/AFR_EUR_combined_flipped-merge",
+  clump_kb = 10000,
   clump_r2 = 0.001)
+write.csv(ldc_meta_analysed, file = "/home/raylton/genetic/clumped_snps.csv", row.names = FALSE)
 
-write.csv(ldc_meta_analysed, file = "clumped_snps.csv", row.names = FALSE)
 
 # Extract relevant columns for each ancestry
 AWIGen_columns <- c("rsid", "Allele1", "Allele2", "Effect", "StdErr", "pval", 

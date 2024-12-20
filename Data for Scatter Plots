@@ -43,7 +43,14 @@ combined_data <- left_join(sslist[[1]], sslist[[2]], by = "snp")
 # Check the resulting dataset
 head(combined_data)
 
+# Define sslist before calling heterogeneity_test for AWIGen and GIANT
+sslist <- list(
+  AWIGen = ldc_meta_analysed %>% select(snp = rsid, bhat = bhat.awigen, se = se.awigen),
+  GIANT = ldc_meta_analysed %>% select(snp = rsid, bhat = bhat.giant, se = se.giant)
+)
 
+# Apply heterogeneity test
+results <- heterogeneity_test(sslist)
 #########################################################################################################################
 merge combined data and results data frames
 #########################################################################################################################

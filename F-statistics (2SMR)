@@ -1,0 +1,25 @@
+# Make sure your mr_data contains only the 428 independent SNPs
+# For example:
+# mr_data <- mr_data[1:428, ]  # or however you subsetted
+
+# Total effective sample size from meta-analysis
+N_eff <- 681275 + 10775  # GIANT + other GWAS = 692,050
+
+# Step 1: Calculate per-SNP F-statistics
+mr_data$F_stat <- (mr_data$beta_exposure / mr_data$se_exposure)^2
+
+# Step 2: Approximate per-SNP partial R²
+mr_data$R2 <- mr_data$F_stat / (mr_data$F_stat + N_eff - 1)
+
+# Step 3: Total variance explained by all 428 SNPs (assuming independence)
+total_R2 <- sum(mr_data$R2)
+
+# Step 4: Report summaries
+cat("Summary of SNP-level F-statistics (428 SNPs):\n")
+print(summary(mr_data$F_stat))
+
+cat("\nSummary of SNP-level R² (428 SNPs):\n")
+print(summary(mr_data$R2))
+
+cat("\nTotal R² explained by all 428 SNPs:\n")
+print(total_R2)

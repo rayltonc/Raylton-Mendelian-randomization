@@ -1,0 +1,9 @@
+#F stat recalculated
+first_stage <- lm(bmi_c_qc~ Total_PRS + age_c + sex + V3 + V4 + V5 + V6 + V7,
+                  data = combined_data)
+summary(first_stage)$fstatistic
+
+s <- summary(first_stage)
+t_val <- s$coefficients["Total_PRS","t value"]
+partial_F <- t_val^2
+partial_F

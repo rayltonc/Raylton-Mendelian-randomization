@@ -1,0 +1,98 @@
+setwd("~/genetic/mr")
+exposure_data <- fread("~/genetic/clumped_snps.csv")
+
+library(ggplot2)
+library(data.table)
+library(metafor)
+library(plyr)
+library(meta)
+library(rmeta)
+
+
+# Bonferroni threshold using alpha = 0.1
+bonferroni_threshold <- 0.1 / 428
+
+# Categorize SNPs by Q p-value
+exposure_data$Q_category <- with(exposure_data, 
+  ifelse(HetPVal<= bonferroni_threshold, "Bonferroni Significant",
+  ifelse(HetPVal<= 0.1, "Significant", "Non-significant")))
+
+# Count SNPs per category
+non_significant_snps <- sum(exposure_data$Q_category == "Non-significant")
+significant_snps <- sum(exposure_data$Q_category == "Significant")
+bonferroni_significant_snps <- sum(exposure_data$Q_category == "Bonferroni Significant")
+
+# Define plot aesthetics depending on Bonferroni hits
+if (bonferroni_significant_snps > 0) {
+  color_values <- c(
+    "Non-significant" = "grey",
+    "Significant" = "red",
+    "Bonferroni Significant" = "blue"
+  )
+  regression_layers <- list(
+    geom_smooth(
+      data = subset(exposure_data, Q_category == "Significant"),
+      method = "lm", se = FALSE, color = "red", linetype = "solid"
+    ),
+    geom_smooth(
+      data = subset(exposure_data, Q_category == "Bonferroni Significant"),
+      method = "lm", se = FALSE, color = "blue", linetype = "solid"
+    )
+  )
+  caption_text <- paste0(
+    "Grey points: Qpval > 0.1 (Non-significant)\n",
+    "Red points and line: ", formatC(bonferroni_threshold, format = "e", digits = 2), " < Qpval <= 0.1 (Significant)\n",
+    "Blue points and line: Qpval <= ", formatC(bonferroni_threshold, format = "e", digits = 2), " (Bonferroni Significant)\n",
+    "Non-significant SNPs: ", non_significant_snps, "\n",
+    "Significant SNPs: ", significant_snps, "\n",
+    "Bonferroni Significant SNPs: ", bonferroni_significant_snps
+  )
+} else {
+  color_values <- c(
+    "Non-significant" = "grey",
+    "Significant" = "red"
+  )
+  regression_layers <- list(
+    geom_smooth(
+      data = subset(exposure_data, Q_category == "Significant"),
+      method = "lm", se = FALSE, color = "red", linetype = "solid"
+    )
+  )
+  caption_text <- paste0(
+    "Grey points: Qpval > 0.1 (Non-significant)\n",
+    "Red points and line: Qpval <= 0.1 (Significant)\n",
+    "Bonferroni Significant SNPs: 0"
+  )
+}
+
+# Create the plot
+plot <- ggplot(exposure_data, aes(x = bhat.awigen, y = bhat.giant, color = Q_category)) +
+  geom_point(size = 3, alpha = 0.7) +
+  scale_color_manual(name = "Qpval category", values = color_values) +  # Updated legend title
+  regression_layers +
+  scale_y_continuous(breaks = c(0.02, 0.05, 0.08, 0.10)) +
+  labs(
+    title = "Comparison of Beta Estimates: AWI-GEN vs GIANT",
+    subtitle = "Coloured by Qpval category with regression lines",
+    caption = caption_text,
+    x = "Beta (AFR, AWI-GEN)",
+    y = "Beta (EUR, GIANT)"
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(
+    legend.position = "bottom",
+    plot.title = element_text(face = "bold"),
+    plot.caption = element_text(hjust = 0),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(color = "black", size = 0.7),
+    axis.ticks = element_line(color = "black", size = 0.7)
+  )
+
+# Save and display the plot
+ggsave("scatter_plot_with_bonferroni_0.1_threshold.pdf", plot = plot, width = 8, height = 6)
+
+
+bonferroni_snps <- exposure_data[HetPVal<= bonferroni_threshold, ]
+print(bonferroni_snps)
+

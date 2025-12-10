@@ -1,0 +1,687 @@
+###427 IVs after Bonferroni correction
+##script saved in cd genetic/mr/HbA1c/UKB as HbA1cUKB_GIANTsnpsFstatsreported.R.save
+
+#Metasnps as exposure, UKB European as outcome GWAS ( individuals)
+
+###################################v
+##R
+setwd("~/genetic/mr/HbA1c/UKB")
+
+#load libraries
+library(data.table)
+library(metafor)
+library(plyr)
+library(meta)
+library(rmeta)
+
+#########################################################################
+# PART 1 - LOAD AND EXPLORE DATA AND DEFINE GENETIC INSTRUMENTS FOR EXPOSURE #
+#########################################################################
+# 1. Load exposure data
+#"rsid","alleles","Allele1","Allele2","Freq1","FreqSE","MinFreq","MaxFreq","Effect","StdErr","pval","Direction","HetISq","HetChiSq","HetDf","HetPVal","rsid.awigen","pval.a>exposure_data <- fread("~/genetic/clumped_snps.csv")
+
+# 2. Load outcome data
+#chromosome     base_pair_location      effect_allele   other_allele    effect_allele_frequency beta    standard_error  p_value sample_size
+outcome <-fread("~/genetic/mr/HbA1c/UKB/EUR_only.tsv")
+
+exposure <- exposure_data
+exposure <- exposure[rsid != "rs2352974"]
+
+# Inspect exposure dataset
+dim(exposure)
+head(exposure)
+colnames(exposure)
+sum(as.numeric(exposure$pval) <= 5e-8)
+summary(as.numeric(exposure$Effect))
+
+#Add chr_bp column to exposure and outcome datasets
+exposure$chr_bp <- paste(exposure$chr, exposure$bp, sep = ":")
+outcome$chr_bp <- paste(outcome$chr, outcome$ pos, sep = ":")
+head(outcome$chr_bp)
+
+#remove NA from outcome dataset
+sum(!complete.cases(outcome))
+outcome <- na.omit(outcome)
+
+
+#merge on chr_bp
+# Merge exposure and outcome by chr_bp
+merged_data <- merge(exposure, outcome, by = "chr_bp", suffixes = c(".exposure", ".outcome"),all=F)
+
+# Check the number of matched SNPs
+nrow(merged_data)
+head(merged_data)
+#> merged_data <- merge(exposure, outcome, by = "chr_bp", suffixes = c(".exposure", ".outcome"))
+#> nrow(merged_data)
+
+
+# Standardize Meta-analysis exposure dataset
+exposure_meta <- data.frame(
+  SNP = exposure$rsid,
+  effect_allele = toupper(exposure$Allele1),
+  other_allele = toupper(exposure$Allele2),
+  beta = exposure$Effect,
+  se = exposure$StdErr,
+  pval = exposure$pval,
+  eaf = exposure$Freq1,
+  sample_size = NA  # Sample size not available in meta-analysis columns
+
+# Standardize AWI-Gen exposure dataset
+exposure_awigen <- data.frame(
+  SNP = exposure$rsid,
+  effect_allele = toupper(exposure$effect.allele),
+  other_allele = toupper(exposure$noneffect.allele),
+  beta = exposure$bhat.awigen,
+  se = exposure$se.awigen,
+  pval = exposure$pval.awigen,
+  eaf = exposure$af.awigen,
+  sample_size = exposure$N.awigen
+)
+
+# Standardize GIANT exposure dataset
+exposure_giant <- data.frame(
+  SNP = exposure$rsid,
+  effect_allele = toupper(exposure$effect.allele),
+  other_allele = toupper(exposure$noneffect.allele),
+  beta = exposure$bhat.giant,
+  se = exposure$se.giant,
+  pval = exposure$pval.giant,
+  eaf = exposure$af.giant,
+  sample_size = exposure$N.giant
+)
+
+head(outcome_std)
+
+        # just one rsid by position and difference
+ table(table((merged_data$rsid)))
+
+
+########################################3
+# Exclude SNPs with MAF between 0.42 and 0.58 (i.e., ambiguous MAF range), regardless of palindrome status
+
+# 1. Merge exposure and outcome datasets by SNP
+merged <- merge(exposure_meta, outcome_std, by = "SNP", suffixes = c("_exposure", "_outcome"))
+
+
+## will check that all effect and other are same
+balise_error_allele<-(merged$effect_allele_exposure == merged$effect_allele_outcome & merged$other_allele_exposure == merged$other_allele_outcome) | (merged$effect_allele_>
+# keeping just same effect and non effect between both
+merged<-merged[balise_error_allele,]
+
+
+switch_beta_af<-(merged$effect_allele_exposure == merged$other_allele_outcome & merged$other_allele_exposure == merged$effect_allele_outcome)
+
+## swith allele frequency
+merged$eaf_outcome[switch_beta_af] <- 1 - merged$eaf_outcome[switch_beta_af]
+# inverse beta
+merged$beta_outcome_flipped <-   merged$beta_outcome
+merged$beta_outcome_flipped[switch_beta_af] <-  - merged$beta_outcome[switch_beta_af]
+
+merged$effect_allele_outcome<-merged$effect_allele_exposure
+merged$other_allele_outcome<-merged$other_allele_exposure
+# 5. Define exclusion flag based on MAF between 0.42 and 0.58
+diff_freq<-abs(merged$eaf_exposure - merged$eaf_outcome)
+exclude_maf <- diff_freq> 0.25
+cat("Number of SNPs excluded due to ambiguous MAF (absolute value of MAF between outcome and exposure > 0.25):", sum(exclude_maf), "\n")
+filtered_merged<-merged[exclude_maf==F,]
+
+#Step 1: Prepare MR dta
+# Select necessary columns and rename for MR clarity
+mr_data <- data.frame(
+  SNP = filtered_merged$SNP,
+  beta_exposure = filtered_merged$beta_exposure,
+  se_exposure = filtered_merged$se_exposure,
+  beta_outcome = filtered_merged$beta_outcome_flipped,
+  se_outcome = filtered_merged$se_outcome
+)
+head(mr_data)
+
+#Step 2: Calculate Wald ratios per SNP
+# Load required package
+# Load required package
+library(meta)
+
+# Step 1: Calculate F-statistic (no filtering applied)
+mr_data$F_stat <- (mr_data$beta_exposure^2) / (mr_data$se_exposure^2)
+
+# Report F statistics (summary + first few values)
+cat("Summary of F-statistics:\n")
+print(summary(mr_data$F_stat))
+cat("\nFirst few F-statistics:\n")
+print(head(mr_data$F_stat))
+# Step 2: Calculate Wald ratio and SE for all SNPs
+
+mr_data$wald_se <- sqrt(
+  (mr_data$se_outcome^2 / mr_data$beta_exposure^2) +
+  ((mr_data$beta_outcome^2 * mr_data$se_exposure^2) / (mr_data$beta_exposure^4))
+)
+# Step 3: IVW meta-analysis
+ivw_res <- metagen(
+  TE = mr_data$wald_ratio,
+  seTE = mr_data$wald_se,
+  sm = "MD",
+  method.tau = "REML",
+  method.random.ci = "HK"
+)
+ivw_summary <- summary(ivw_res)
+
+cat("\nIVW Results:\n")
+print(ivw_summary)
+############################################################
+
+######################################################3n
+#Forest plot
+# Load libraries
+library(ggplot2)
+library(dplyr)
+
+# Step 1: Prepare the plotting dataset
+plot_df <- mr_data %>%
+  mutate(
+    SNP = as.character(SNP),
+    Effect = wald_ratio,
+    SE = wald_se,
+    Lower = Effect - 1.96 * SE,
+    Upper = Effect + 1.96 * SE
+  ) %>%
+  filter(
+    is.finite(Effect),
+    is.finite(SE),
+    is.finite(Lower),
+    is.finite(Upper)
+  ) %>%
+  mutate(SNP_order = factor(SNP, levels = SNP[order(Effect)]))
+
+# Step 2: Extract IVW estimate from meta-analysis result
+ivw_estimate <- as.numeric(ivw_res$TE.fixed)
+
+# Step 3: Create the forest plot
+forest_plot <- ggplot(plot_df, aes(x = Effect, y = SNP_order)) +
+  geom_point(color = "black", shape = 18, size = 3) +  # Diamond points
+  geom_errorbarh(aes(xmin = Lower, xmax = Upper), height = 0.15, color = "gray60") +
+  geom_vline(xintercept = ivw_estimate, linetype = "dashed", color = "#E69F00", size = 1) +  # IVW line
+  geom_vline(xintercept = 0, linetype = "dotted", color = "black") +  # Null effect
+  theme_minimal(base_size = 14) +
+  theme(
+    axis.text.y = element_text(size = 12),
+    axis.ticks.y = element_line(),
+    legend.position = "none",
+    plot.margin = margin(1, 1, 1, 2, "cm"),
+    plot.title = element_text(face = "bold", size = 16),
+    axis.title.x = element_text(face = "bold")
+  ) +
+  labs(
+    title = "Forest Plot: Individual SNP Effects (Strong Instruments Only)",
+    x = "Beta Estimate (Wald Ratio) & 95% CI",
+    y = NULL,
+    caption = "Dashed = IVW fixed-effect estimate; Dotted = Null"
+  )
+
+# Step 4: Save plot with dynamic height
+n_snps <- nrow(plot_df)
+plot_height <- max(4, n_snps * 0.5)
+
+ggsave("forestplot_strongSNPs.pdf",
+       plot = forest_plot,
+       width = 8,
+       height = plot_height,
+       limitsize = FALSE)
+
+###############################################################3r
+#SENSITIVITY ANALYSES
+#############################################################r
+# Prepare inputs using strong instruments only
+wald_ratio <- mr_data$wald_ratio
+wald_se    <- mr_data$wald_se
+weight     <- 1 / (wald_se^2)
+
+# Optional: show summary
+summary(wald_ratio)
+summary(wald_se)
+summary(weight)
+
+# Extract MR inputs
+gp   <- mr_data$beta_exposure
+gd   <- mr_data$beta_outcome
+segp <- mr_data$se_exposure
+segd <- mr_data$se_outcome
+
+# Attach computed values
+mr_data$wald_ratio <- wald_ratio
+mr_data$wald_se    <- wald_se
+mr_data$weight     <- weight
+
+#####################################################################################################
+# Mendelian Randomization Functions
+# ====================###############################################################################
+
+# MR-Egger Regression
+# MR-Egger regression function with multiplicative random effects
+two_sample_mr_egger <- function(bx, by, se_bx, se_by, multiplicative = TRUE) {
+  w <- 1 / (se_by^2)  # weights on outcome SE
+ s <- summary(fit)
+  df <- length(by) - 2
+
+  rse <- s$sigma  # residual standard error
+  scale <- if (multiplicative) max(1, rse) else 1
+
+  beta <- coef(fit)[2]
+  beta_se <- coef(s)[2, 2] * scale
+  beta_t <- beta / beta_se
+  beta_p <- 2 * pt(-abs(beta_t), df)
+  beta_l <- beta - qt(0.975, df) * beta_se
+  beta_u <- beta + qt(0.975, df) * beta_se
+
+  alpha <- coef(fit)[1]
+  alpha_se <- coef(s)[1, 2] * scale
+  alpha_t <- alpha / alpha_se
+  alpha_p <- 2 * pt(-abs(alpha_t), df)
+  alpha_l <- alpha - qt(0.975, df) * alpha_se
+  alpha_u <- alpha + qt(0.975, df) * alpha_se
+
+  list(
+    beta.egger       = beta,
+    beta.se.egger    = beta_se,
+    beta.lower.egger = beta_l,
+    beta.upper.egger = beta_u,
+    beta.t.egger     = beta_t,
+    beta.p.egger     = beta_p,
+
+    alpha.egger       = alpha,
+    alpha.se.egger    = alpha_se,
+    alpha.lower.egger = alpha_l,
+    alpha.upper.egger = alpha_u,
+    alpha.t.egger     = alpha_t,
+    alpha.p.egger     = alpha_p,
+
+    rse = rse,
+    df  = df
+  )
+}
+
+# Run MR-Egger
+bx <- mr_data$beta_exposure
+by <- mr_data$beta_outcome
+se_bx <- mr_data$se_exposure
+se_by <- mr_data$se_outcome
+
+Egger <- two_sample_mr_egger(bx, by, se_bx, se_by, multiplicative = TRUE)
+
+###########################################################################################################
+
+# Mode Estimator (with Bootstrapped CI)
+##########################################################################################################3
+ModeEstimator <- function(x, y, sigmax, sigmay,
+                          phi = c(1, 0.5, 0.25),
+                          n_boot = 1e4,
+                          alpha = 0.05) {
+  # x = beta_exposure, y = beta_outcome
+  N <- length(x)
+
+  density_mode <- function(beta_iv, weights, bw) {
+    # Ensure weights is numeric vector, same length as beta_iv
+    if (is.matrix(weights) || is.data.frame(weights)) {
+      weights <- as.numeric(weights[,1])
+    }
+    stopifnot(length(beta_iv) == length(weights))
+
+    # Remove non-finite values from beta_iv and weights
+    ok <- is.finite(beta_iv) & is.finite(weights)
+    beta_iv <- beta_iv[ok]
+    weights <- weights[ok]
+
+    # Normalize weights to sum to 1
+    weights <- weights / sum(weights)
+
+    if (any(weights < 0) || length(beta_iv) == 0) {
+      stop("Invalid weights or empty beta_iv in density_mode")
+    }
+
+    d <- density(beta_iv, weights = weights, bw = bw)
+    d$x[which.max(d$y)]
+  }
+
+  get_modes <- function(beta_iv, se_beta_iv, phi) {
+    # bandwidth base (Silverman rule with 0.9 factor)
+    s <- 0.9 * min(sd(beta_iv), mad(beta_iv)) / (length(beta_iv)^(1/5))
+
+    # Calculate weights vector from SEs
+    w_iv <- 1 / se_beta_iv^2
+    w_iv <- w_iv / sum(w_iv)
+
+    sapply(phi, function(cur_phi) {
+      h <- s * cur_phi
+      density_mode(beta_iv, w_iv, h)
+    })
+  }
+
+  # Calculate Wald ratios & SEs
+  BetaIV   <- y / x
+  seBetaIV <- cbind(
+    sqrt((sigmay^2) / (x^2) + (y^2 * sigmax^2) / (x^4)),  # Full delta method
+    sigmay / abs(x)                                       # NOME
+  )
+
+  # Point estimates
+  beta_SimpleMode        <- get_modes(BetaIV, rep(1, N),           phi)
+  beta_WeightedMode      <- get_modes(BetaIV, seBetaIV[, 1],       phi)
+  beta_SimpleMode_NOME   <- get_modes(BetaIV, rep(1, N),           phi)
+  beta_WeightedMode_NOME <- get_modes(BetaIV, seBetaIV[, 2],       phi)
+
+  beta_Mode <- c(beta_SimpleMode,
+                 beta_WeightedMode,
+                 beta_SimpleMode_NOME,
+                 beta_WeightedMode_NOME)
+
+  # Bootstrap
+  boot_modes <- matrix(NA_real_, nrow = n_boot, ncol = length(beta_Mode))
+  L <- length(phi)
+
+  set.seed(123)
+  for (i in seq_len(n_boot)) {
+    BetaIV.boot      <- rnorm(N, mean = BetaIV, sd = seBetaIV[, 1])
+    BetaIV.boot_NOME <- rnorm(N, mean = BetaIV, sd = seBetaIV[, 2])
+
+    boot_modes[i, 1:L]           <- get_modes(BetaIV.boot,      rep(1, N),      phi)  # Simple
+    boot_modes[i, (L+1):(2*L)]   <- get_modes(BetaIV.boot,      seBetaIV[, 1],  phi)  # Weighted
+    boot_modes[i, (2*L+1):(3*L)] <- get_modes(BetaIV.boot_NOME, rep(1, N),      phi)  # Simple (NOME)
+    boot_modes[i, (3*L+1):(4*L)] <- get_modes(BetaIV.boot_NOME, seBetaIV[, 2],  phi)  # Weighted (NOME)
+  }
+
+  se_Mode   <- apply(boot_modes, 2, mad, na.rm = TRUE)
+  z_975     <- qnorm(1 - alpha/2)
+  CIlow_Mode <- beta_Mode - z_975 * se_Mode
+  CIupp_Mode <- beta_Mode + z_975 * se_Mode
+  P_Mode     <- 2 * pnorm(-abs(beta_Mode / se_Mode))
+
+  Method <- rep(c("Simple", "Weighted", "Simple (NOME)", "Weighted (NOME)"), each = L)
+
+  data.frame(
+    Method   = Method,
+    phi      = rep(phi, 4),
+    Estimate = beta_Mode,
+    SE       = se_Mode,
+    CI_low   = CIlow_Mode,
+    CI_upp   = CIupp_Mode,
+    P        = P_Mode
+  )
+}
+# Example usage:
+Mode <- ModeEstimator(
+  x = mr_data$beta_exposure,
+  y = mr_data$beta_outcome,
+  sigmax = mr_data$se_exposure,
+  sigmay = mr_data$se_outcome,
+  phi = c(1, 0.5, 0.25),
+  n_boot = 5000
+)
+
+# Extract Weighted (NOME), phi = 0.5
+mode_row <- Mode[Mode$Method == "Weighted (NOME)" & Mode$phi == 0.5, , drop = FALSE]
+if (nrow(mode_row) == 0) stop("No matching Mode row found.")
+Mode_list <- list(
+  beta.mode = mode_row$Estimate[1],
+  se.mode   = mode_row$SE[1],
+  ci.lower  = mode_row$CI_low[1],
+  ci.upper  = mode_row$CI_upp[1],
+  pval.mode = mode_row$P[1]
+)
+
+
+
+########################################################################################################
+#Extract IVW from metagen
+IVW <- list(
+  beta.ivw       = ivw_res$TE.random,
+  beta.se.ivw    = ivw_res$seTE.random,
+  beta.lower.ivw = ivw_res$lower.random,
+  beta.upper.ivw = ivw_res$upper.random,
+  beta.p.ivw     = ivw_res$pval.random
+)
+#################################################################################################
+# ---- 1) Weighted median ----
+#################################################################################################
+weighted.median <- function(x, w) {
+  N    <- length(x)
+  ord  <- order(x)
+  x    <- x[ord]
+  w    <- w[ord]
+  Sn   <- cumsum(w)
+  S_N  <- Sn[N]
+  Pn   <- (100 / S_N) * (Sn - w / 2)
+
+  if (sort(abs(Pn - 50))[1] == 0) {
+    M <- which(Pn == 50)
+    return(x[M])
+  }
+
+  Q  <- length(Pn[sign(Pn - 50) == -1])
+  V1 <- Q
+  V2 <- Q + 1
+  M  <- x[V1] + (50 - Pn[V1]) * (x[V2] - x[V1]) / (Pn[V2] - Pn[V1])
+  return(M)
+}
+
+# ---- 2) Bootstrap function (define ONCE) ----
+bootstrap_weighted_median <- function(x, w, nboot = 1000) {
+  N <- length(x)
+  boot_estimates <- numeric(nboot)
+  for (i in 1:nboot) {
+    idx <- sample(seq_len(N), size = N, replace = TRUE)
+    boot_estimates[i] <- weighted.median(x[idx], w[idx])
+  }
+  list(
+    estimate = weighted.median(x, w),
+    ci_lower = quantile(boot_estimates, 0.025, na.rm = TRUE),
+    ci_upper = quantile(boot_estimates, 0.975, na.rm = TRUE),
+    boot_estimates = boot_estimates
+  )
+}
+
+# ---- 3) Prepare data ----
+x <- mr_data$wald_ratio
+w <- 1 / (mr_data$wald_se^2)
+
+# ---- 4) Bootstrap ----
+set.seed(123)
+results <- bootstrap_weighted_median(x, w, nboot = 1000)
+
+se_median <- sd(results$boot_estimates, na.rm = TRUE)
+p_val     <- 2 * pnorm(-abs(results$estimate / se_median))   # <-- THIS is your p-value
+
+cat("Weighted median estimate (bootstrap):", round(results$estimate, 4), "\n")
+cat("95% CI (bootstrap): [", round(results$ci_lower, 4), ", ", round(results$ci_upper, 4), "]\n")
+cat("Bootstrap SE:", round(se_median, 4), "\n")
+cat("P-value (normal approx with bootstrap SE):", signif(p_val, 3), "\n")
+# ---- 5) Pack into Median object ----
+Median <- list(
+  beta.median = results$estimate,
+  se.median   = se_median,
+  ci.lower    = results$ci_lower,
+  ci.upper    = results$ci_upper,
+  pval.median = p_val
+)
+
+
+# Summary table function combining MR methods
+MR_output <- function(IVW, Egger, Median, Mode) {
+  # Create empty data frame
+  output <- data.frame(
+    test       = c("IVW", "MR-Egger", "MR-Egger", "Weighted_median", "Weighted_mode"),
+    parameter  = c("beta", "beta", "alpha", "beta", "beta"),
+    estimate   = NA_real_,
+    se         = NA_real_,
+    lower_CI   = NA_real_,
+    upper_CI   = NA_real_,
+    p_value    = NA_real_,
+    stringsAsFactors = FALSE
+  )
+
+  # Fill IVW results
+  output[1, 3:7] <- c(
+    IVW$beta.ivw,
+    IVW$beta.se.ivw,
+    IVW$beta.lower.ivw,
+    IVW$beta.upper.ivw,
+    IVW$beta.p.ivw
+  )
+
+  # Fill MR-Egger beta
+  output[2, 3:7] <- c(
+    Egger$beta.egger,
+    Egger$beta.se.egger,
+    Egger$beta.lower.egger,
+    Egger$beta.upper.egger,
+    Egger$beta.p.egger
+  )
+
+  # Fill MR-Egger alpha
+  output[3, 3:7] <- c(
+    Egger$alpha.egger,
+    Egger$alpha.se.egger,
+    Egger$alpha.lower.egger,
+    Egger$alpha.upper.egger,
+    Egger$alpha.p.egger
+  )
+
+  # Fill Weighted Median
+  output[4, 3:7] <- c(
+    Median$beta.median,
+    Median$se.median,
+    Median$ci.lower,
+    Median$ci.upper,
+    Median$pval.median
+  )
+
+  # Fill Weighted Mode (check for row)
+  mode_row <- Mode[Mode$Method == "Weighted (NOME)" & Mode$phi == 0.5, , drop = FALSE]
+  if (nrow(mode_row) >= 1) {
+    vals <- as.numeric(mode_row[1, c("Estimate", "SE", "CI_low", "CI_upp", "P")])
+    output[5, 3:7] <- vals
+  } else {
+    warning("No Mode row matched Method == 'Weighted (NOME)' & phi == 0.5. Filling NA.")
+    output[5, 3:7] <- rep(NA_real_, 5)
+  }
+
+  return(output)
+}
+# ---- 6) Build the summary table ----
+sensitivity <- MR_output(IVW, Egger, Median, Mode)
+print(sensitivity)
+
+# Save the sensitivity results as a CSV file
+write.csv(sensitivity, file = "MR_Sensitivity_Analysis_AWIGen.csv", row.names = FALSE)
+#######################################################################################################
+
+
+#Scatter plot for MR Methods
+# Load library
+library(ggplot2)
+
+# Your merged dataset
+plot_df <- filtered_merged
+
+# Calculate weights
+plot_df$weight <- 1 / (plot_df$se_outcome)^2
+
+# Fit MR models
+ivw_fit     <- lm(beta_outcome ~ beta_exposure - 1, weights = weight, data = plot_df)       # IVW (no intercept)
+egger_fit   <- lm(beta_outcome ~ beta_exposure, weights = weight, data = plot_df)           # MR-Egger
+median_slope <- sensitivity$estimate[sensitivity$test == "Weighted_median"]
+mode_slope   <- sensitivity$estimate[sensitivity$test == "Weighted_mode"]
+
+# Open PDF
+pdf("MR_scatter_plot_GIANT_BMI_AWIGen.pdf", width = 7, height = 6)
+
+# Build plot
+ggplot(plot_df, aes(x = beta_exposure, y = beta_outcome)) +
+  # Confidence intervals
+  geom_errorbar(aes(ymin = beta_outcome - 1.96 * se_outcome,
+                    ymax = beta_outcome + 1.96 * se_outcome),
+                width = 0, color = "gray60", alpha = 0.6) +
+  geom_errorbarh(aes(xmin = beta_exposure - 1.96 * se_exposure,
+                     xmax = beta_exposure + 1.96 * se_exposure),
+                 height = 0, color = "gray60", alpha = 0.6) +
+  # SNP points in black
+  geom_point(color = "black", alpha = 0.7, size = 2) +
+
+  # MR method lines with distinct, color-blind-friendly colours
+  geom_abline(aes(slope = coef(ivw_fit)[1], intercept = 0, color = "IVW"), size = 1.1) +
+  geom_abline(aes(slope = coef(egger_fit)[2], intercept = coef(egger_fit)[1], color = "MR-Egger"),
+              size = 1.1, linetype = "dashed") +
+  geom_abline(aes(slope = median_slope, intercept = 0, color = "Weighted median"),
+              size = 1.1, linetype = "dotdash") +
+  geom_abline(aes(slope = mode_slope, intercept = 0, color = "Weighted mode"),
+              size = 1.1, linetype = "twodash") +
+
+  # Customize axes
+  labs(
+    x = "Genetic association with BMI (exposure)",
+    y = "Genetic association with HbA1c (outcome)",
+    color = NULL  # Title for legend removed
+  ) +
+
+  # Legend and theme
+  theme_minimal(base_size = 14) +
+  theme(
+    legend.position = c(0.02, 0.98),  # Top-left corner
+    legend.justification = c(0, 1),
+    legend.background = element_rect(fill = "white", color = NA),
+    legend.box.background = element_rect(color = "gray80")
+  ) +
+  scale_color_manual(values = c(
+    "IVW" = "#E69F00",             # Orange (CUD palette)
+    "MR-Egger" = "#009E73",        # Teal green
+    "Weighted median" = "#56B4E9", # Sky blue
+    "Weighted mode" = "#CC79A7"    # Pink-purple
+  ))
+
+# Close PDF
+dev.off()
+##################################################.
+#Directional Horizontal Pleiotropy
+# MR-Egger intercept test for pleiotropy
+egger_intercept <- summary(lm(gd ~ gp, weights = 1 / segd^2))$coefficients[1, 1]
+egger_se        <- summary(lm(gd ~ gp, weights = 1 / segd^2))$coefficients[1, 2]
+egger_pval      <- summary(lm(gd ~ gp, weights = 1 / segd^2))$coefficients[1, 4]
+
+cat("Egger intercept:", egger_intercept, "\n")
+cat("SE:", egger_se, "P-value:", egger_pval, "\n")
+
+# Create a data frame for the Egger intercept test results
+pleiotropy_results <- data.frame(
+  egger_intercept = egger_intercept,
+  egger_se = egger_se,
+  egger_pval = egger_pval
+)
+
+# Save to CSV
+write.csv(pleiotropy_results, "pleiotropy_results_AWIGensnps.csv", row.names = FALSE)
+####################################################################.
+#Heterogeneity
+#Test: Cochran’s Q-statistic (for both IVW and Egger)
+# Predicted effects
+ivw_predicted <- gp * coef(ivw_fit)[1]
+egger_predicted <- coef(egger_fit)[1] + gp * coef(egger_fit)[2]
+
+# Cochran’s Q for IVW
+q_ivw <- sum(((gd - ivw_predicted)^2) / segd^2)
+df_ivw <- length(gd) - 1
+pval_q_ivw <- pchisq(q_ivw, df_ivw, lower.tail = FALSE)
+
+# Cochran’s Q for Egger
+q_egger <- sum(((gd - egger_predicted)^2) / segd^2)
+df_egger <- length(gd) - 2
+pval_q_egger <- pchisq(q_egger, df_egger, lower.tail = FALSE)
+at("IVW Heterogeneity Q:", q_ivw, "df:", df_ivw, "p:", pval_q_ivw, "\n")
+cat("Egger Heterogeneity Q:", q_egger, "df:", df_egger, "p:", pval_q_egger, "\n")
+
+heterogeneity <- data.frame(
+  test = c("IVW", "MR-Egger"),
+  Q = c(q_ivw, q_egger),
+  df = c(df_ivw, df_egger),
+  p_value = c(pval_q_ivw, pval_q_egger)
+)
+
+write.csv(heterogeneity, file = "MR_heterogeneity_AWIGensnps.csv", row.names = FALSE)
+#########################################################################3

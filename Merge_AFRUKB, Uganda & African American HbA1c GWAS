@@ -155,8 +155,28 @@ merged <- merged %>%
 
 # -----------------------------
 # 13. Save merged table
-# -----------------------------
-write.table(merged, file.path(processed_dir, "HbA1c_merged_GIANT_style_autosomes_withPVAL_N_no_duplicates.txt"),
-            row.names = FALSE, quote = FALSE, sep = "\t")
 
-cat("Merged table saved with p-values, AF, sample sizes, duplicates removed. Number of SNPs:", nrow(merged), "\n")
+#Create CHR_BP
+
+library(dplyr)
+
+# Create CHR_BP if not already present
+merged <- merged %>%
+  mutate(CHR_BP = paste0(CHR, ":", BP))
+
+# Define output path
+output_file <- "/home/raylton/genetic/mr/HbA1c/processed/HbA1c_merged_GIANT_style_autosomes_withPVAL_N_no_duplicates.txt"
+
+# Save the merged table
+write.table(
+  merged,
+  file = output_file,
+  row.names = FALSE,
+  quote = FALSE,
+  sep = "\t"
+)
+
+cat("Merged table saved with CHR_BP, p-values, AF, sample sizes, duplicates removed. Number of SNPs:", nrow(merged), "\n")
+
+###########################################################################3
+

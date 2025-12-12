@@ -1,0 +1,162 @@
+# ===============================
+# HbA1c GWAS Merge Workflow (UKB AFR + MAGIC (Uganda + African American))
+# ===============================
+
+library(data.table)
+library(dplyr)
+library(tibble)
+library(rlang)
+
+# -----------------------------
+# 1. Define file paths
+# -----------------------------
+ukb_file    <- "~/genetic/mr/HbA1c/UKB/UKBAFR_converted.csv"
+uganda_file <- "~/genetic/mr/HbA1c/GCST90002248/GCST90002248_buildGRCh37.tsv.gz"
+aa_file     <- "~/genetic/mr/HbA1c/GCST90002242/GCST90002242_buildGRCh37.tsv.gz"
+
+processed_dir <- "~/genetic/mr/HbA1c/processed"
+dir.create(processed_dir, showWarnings = FALSE, recursive = TRUE)
+
+# -----------------------------
+# 2. Load datasets
+# -----------------------------
+ukb <- fread(ukb_file)
+uganda <- fread(uganda_file, sep="\t")
+aa <- fread(aa_file, sep="\t")
+
+# -----------------------------
+# 3. Format GWAS datasets
+# -----------------------------
+format_gwas <- function(dt, beta_col, se_col, effect_col, noneffect_col,
+                        chr_col, pos_col, af_col=NULL, pval_col=NULL, n_col=NULL) {
+  dt <- tibble::as_tibble(dt)
+  
+  dt <- dt %>%
+    dplyr::rename(
+      BETA = !!beta_col,
+      SE = !!se_col,
+      EFFECT_ALLELE = !!effect_col,
+      NONEFFECT_ALLELE = !!noneffect_col,
+      CHR = !!chr_col,
+      BP = !!pos_col
+    )
+  
+  if(!is.null(af_col) && af_col %in% names(dt)) dt <- dt %>% mutate(AF = !!sym(af_col)) else dt <- dt %>% mutate(AF = NA_real_)
+  if(!is.null(pval_col) && pval_col %in% names(dt)) dt <- dt %>% mutate(PVAL = !!sym(pval_col)) else dt <- dt %>% mutate(PVAL = NA_real_)
+  if(!is.null(n_col) && n_col %in% names(dt)) dt <- dt %>% mutate(N = !!sym(n_col)) else dt <- dt %>% mutate(N = NA_real_)
+  
+  return(dt)
+}
+
+# -----------------------------
+# 4. Apply formatting
+# -----------------------------
+ukb_fmt <- format_gwas(
+  ukb, beta_col="beta_AFRUKB_percent", se_col="se_AFRUKB_percent",
+  effect_col="ref", noneffect_col="alt", chr_col="chr", pos_col="pos",
+  af_col="af_AFRUKB", pval_col="neglog10_pval_AFR"
+) %>%
+  mutate(PVAL = 10^(-PVAL), N = 5290)  # UKB sample size
+
+uganda_fmt <- format_gwas(
+  uganda, beta_col="beta", se_col="standard_error",
+  effect_col="effect_allele", noneffect_col="other_allele",
+  chr_col="chromosome", pos_col="base_pair_location",
+  af_col="effect_allele_frequency", pval_col="p_value", n_col="sample_size"
+)
+
+aa_fmt <- format_gwas(
+  aa, beta_col="beta", se_col="standard_error",
+  effect_col="effect_allele", noneffect_col="other_allele",
+  chr_col="chromosome", pos_col="base_pair_location",
+  af_col="effect_allele_frequency", pval_col="p_value", n_col="sample_size"
+)
+
+# -----------------------------
+# 5. Remove duplicates in each dataset (keep first occurrence)
+# -----------------------------
+ukb_fmt <- ukb_fmt %>% distinct(CHR, BP, .keep_all = TRUE)
+uganda_fmt <- uganda_fmt %>% distinct(CHR, BP, .keep_all = TRUE)
+aa_fmt <- aa_fmt %>% distinct(CHR, BP, .keep_all = TRUE)
+
+# -----------------------------
+# 6. Rename columns for merging
+# -----------------------------
+ukb_fmt <- ukb_fmt %>%
+  rename(BETA.UKB=BETA, SE.UKB=SE, EFFECT_ALLELE.UKB=EFFECT_ALLELE,
+         NONEFFECT_ALLELE.UKB=NONEFFECT_ALLELE, AF.UKB=AF, PVAL.UKB=PVAL, N.UKB=N)
+
+uganda_fmt <- uganda_fmt %>%
+  rename(BETA.Uganda=BETA, SE.Uganda=SE, EFFECT_ALLELE.Uganda=EFFECT_ALLELE,
+         NONEFFECT_ALLELE.Uganda=NONEFFECT_ALLELE, AF.Uganda=AF, PVAL.Uganda=PVAL, N.Uganda=N)
+
+aa_fmt <- aa_fmt %>%
+  rename(BETA.AA=BETA, SE.AA=SE, EFFECT_ALLELE.AA=EFFECT_ALLELE,
+         NONEFFECT_ALLELE.AA=NONEFFECT_ALLELE, AF.AA=AF, PVAL.AA=PVAL, N.AA=N)
+
+# -----------------------------
+# 7. Merge datasets by CHR and BP
+# -----------------------------
+merged <- ukb_fmt %>%
+  inner_join(uganda_fmt, by=c("CHR","BP")) %>%
+  inner_join(aa_fmt, by=c("CHR","BP"))
+
+# -----------------------------
+# 8. Remove ambiguous SNPs (A/T or C/G)
+# -----------------------------
+merged <- merged %>%
+  mutate(is_ambiguous = (EFFECT_ALLELE.UKB %in% c("A","T") & NONEFFECT_ALLELE.UKB %in% c("A","T")) |
+                        (EFFECT_ALLELE.UKB %in% c("C","G") & NONEFFECT_ALLELE.UKB %in% c("C","G"))) %>%
+  filter(!is_ambiguous)
+
+# -----------------------------
+# 9. Restrict to autosomes (CHR 1-22)
+# -----------------------------
+merged <- merged %>% filter(CHR %in% as.character(1:22))
+
+# -----------------------------
+# 10. Align alleles to UKB reference
+# -----------------------------
+# Uganda
+merged <- merged %>%
+  mutate(Flip_Uganda = EFFECT_ALLELE.UKB != EFFECT_ALLELE.Uganda,
+         BETA.Uganda = ifelse(Flip_Uganda, -BETA.Uganda, BETA.Uganda),
+         AF.Uganda = ifelse(Flip_Uganda, 1 - AF.Uganda, AF.Uganda),
+         Temp = EFFECT_ALLELE.Uganda,
+         EFFECT_ALLELE.Uganda = ifelse(Flip_Uganda, NONEFFECT_ALLELE.Uganda, Temp),
+         NONEFFECT_ALLELE.Uganda = ifelse(Flip_Uganda, Temp, NONEFFECT_ALLELE.Uganda)) %>%
+  select(-Flip_Uganda, -Temp)
+
+# AA
+merged <- merged %>%
+  mutate(Flip_AA = EFFECT_ALLELE.UKB != EFFECT_ALLELE.AA,
+         BETA.AA = ifelse(Flip_AA, -BETA.AA, BETA.AA),
+         AF.AA = ifelse(Flip_AA, 1 - AF.AA, AF.AA),
+         Temp = EFFECT_ALLELE.AA,
+         EFFECT_ALLELE.AA = ifelse(Flip_AA, NONEFFECT_ALLELE.AA, Temp),
+         NONEFFECT_ALLELE.AA = ifelse(Flip_AA, Temp, NONEFFECT_ALLELE.AA)) %>%
+  select(-Flip_AA, -Temp)
+
+# -----------------------------
+# 11. Remove duplicate positions after merge
+# -----------------------------
+tmp <- table(paste0(merged$CHR, ":", merged$BP))
+merged <- merged[!(paste0(merged$CHR, ":", merged$BP) %in% names(tmp[tmp>1])),]
+
+# -----------------------------
+# 12. Set final allele columns
+# -----------------------------
+merged <- merged %>%
+  mutate(EFFECT_ALLELE = EFFECT_ALLELE.UKB,
+         NONEFFECT_ALLELE = NONEFFECT_ALLELE.UKB) %>%
+  select(-EFFECT_ALLELE.UKB, -NONEFFECT_ALLELE.UKB,
+         -EFFECT_ALLELE.Uganda, -NONEFFECT_ALLELE.Uganda,
+         -EFFECT_ALLELE.AA, -NONEFFECT_ALLELE.AA)
+
+# -----------------------------
+# 13. Save merged table
+# -----------------------------
+write.table(merged, file.path(processed_dir, "HbA1c_merged_GIANT_style_autosomes_withPVAL_N_no_duplicates.txt"),
+            row.names = FALSE, quote = FALSE, sep = "\t")
+
+cat("Merged table saved with p-values, AF, sample sizes, duplicates removed. Number of SNPs:", nrow(merged), "\n")

@@ -38,7 +38,15 @@ EFFECT BETA
 STDERR SE
 PVALUE PVALUE
 FREQ FREQ
+WEIGHT N
+PROCESS /home/raylton/genetic/mr/HbA1c/processed/HbA1c_AA_for_METAL.txt
+# -----------------------------
+# Output
+# -----------------------------
+OUTFILE /home/raylton/genetic/mr/HbA1c/processed/metal/meta_analysis_ .tbl
 
+ANALYZE
+ANALYZE HETEROGENEITY
 #########################################################
 RUN IN METAL
 #########################################################

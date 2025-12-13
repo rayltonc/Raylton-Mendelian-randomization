@@ -31,7 +31,7 @@ PROCESS /home/raylton/genetic/mr/HbA1c/processed/HbA1c_Uganda_for_METAL.txt
 # -----------------------------
 # African American cohort
 # -----------------------------
-PROCESS /home/raylton/genetic/mr/HbA1c/processed/HbA1c_AA_for_METAL.txt
+
 MARKER CHR_BP
 ALLELE EFFECT_ALLELE NONEFFECT_ALLELE
 EFFECT BETA

@@ -1,0 +1,48 @@
+
+nano AFRmetal.txt
+
+SCHEME STDERR
+GENOMICCONTROL ON
+AVERAGEFREQ ON
+MINMAXFREQ ON
+SEPARATOR TAB
+# -----------------------------
+# UKB cohort
+# -----------------------------
+MARKER CHR_BP
+ALLELE EFFECT_ALLELE NONEFFECT_ALLELE
+EFFECT BETA
+STDERR SE
+PVALUE PVALUE
+FREQ FREQ
+WEIGHT N
+PROCESS /home/raylton/genetic/mr/HbA1c/processed/HbA1c_UKB_for_METAL.clean.txt
+# -----------------------------
+# Uganda cohort
+# ----------------------------
+MARKER CHR_BP
+ALLELE EFFECT_ALLELE NONEFFECT_ALLELE
+EFFECT BETA
+STDERR SE
+PVALUE PVALUE
+FREQ FREQ
+WEIGHT N
+PROCESS /home/raylton/genetic/mr/HbA1c/processed/HbA1c_Uganda_for_METAL.txt
+# -----------------------------
+# African American cohort
+# -----------------------------
+PROCESS /home/raylton/genetic/mr/HbA1c/processed/HbA1c_AA_for_METAL.txt
+MARKER CHR_BP
+ALLELE EFFECT_ALLELE NONEFFECT_ALLELE
+EFFECT BETA
+STDERR SE
+PVALUE PVALUE
+FREQ FREQ
+
+#########################################################
+RUN IN METAL
+#########################################################
+/home/raylton/genetic/generic-metal/metal /home/raylton/genetic/mr/HbA1c/processed/AFRmetal.txt
+
+ 
+

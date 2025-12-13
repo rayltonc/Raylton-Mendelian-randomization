@@ -1,0 +1,130 @@
+# ===============================
+# Full GWAS Meta-analysis Workflow
+# ===============================
+
+library(data.table)
+
+# -----------------------------
+# 1. Define file paths
+# -----------------------------
+ukb_file    <- "~/genetic/mr/HbA1c/UKB/UKBAFR_converted.csv"
+uganda_file <- "~/genetic/mr/HbA1c/GCST90002248/GCST90002248_buildGRCh37.tsv.gz"
+aa_file     <- "~/genetic/mr/HbA1c/GCST90002242/GCST90002242_buildGRCh37.tsv.gz"
+
+processed_dir <- "~/genetic/mr/HbA1c/processed"
+dir.create(processed_dir, showWarnings = FALSE, recursive = TRUE)
+
+# -----------------------------
+# 2. Load datasets
+# -----------------------------
+ukb <- fread(ukb_file)
+uganda <- fread(uganda_file)
+aa <- fread(aa_file)
+
+# -----------------------------
+# 3. Harmonize column names
+# -----------------------------
+setnames(ukb,
+         old = c("chr", "pos", "ref", "alt", "beta_AFRUKB_percent", "se_AFRUKB_percent"),
+         new = c("chr", "pos", "ref", "alt", "beta_UKB_percent", "se_UKB_percent"))
+
+setnames(uganda,
+         old = c("chromosome", "base_pair_location", "effect_allele", "other_allele", "beta", "standard_error"),
+         new = c("chr", "pos", "ref", "alt", "beta_Uganda_percent", "se_Uganda_percent"))
+
+setnames(aa,
+         old = c("chromosome", "base_pair_location", "effect_allele", "other_allele", "beta", "standard_error"),
+         new = c("chr", "pos", "ref", "alt", "beta_AA_percent", "se_AA_percent"))
+
+# -----------------------------
+# 4. Merge datasets by SNP
+# -----------------------------
+merged <- merge(ukb[, .(chr, pos, ref, alt, beta_UKB_percent, se_UKB_percent)],
+                uganda[, .(chr, pos, ref, alt, beta_Uganda_percent, se_Uganda_percent)],
+                by = c("chr","pos","ref","alt"), all = TRUE)
+
+merged <- merge(merged,
+                aa[, .(chr, pos, ref, alt, beta_AA_percent, se_AA_percent)],
+                by = c("chr","pos","ref","alt"), all = TRUE)
+
+# -----------------------------
+# 5. Harmonize effect alleles
+# -----------------------------
+harmonize_beta <- function(beta_ref, ref1, alt1, ref2, alt2) {
+  if(is.na(beta_ref) | is.na(ref1) | is.na(alt1) | is.na(ref2) | is.na(alt2)) return(NA)
+  if(ref1 == ref2 & alt1 == alt2) return(beta_ref)
+  if(ref1 == alt2 & alt1 == ref2) return(-beta_ref)
+  return(NA)
+}
+
+# Apply alignment (here using UKB as reference)
+merged[, beta_Uganda_aligned := mapply(harmonize_beta, beta_Uganda_percent, ref, alt, ref, alt)]
+merged[, beta_AA_aligned     := mapply(harmonize_beta, beta_AA_percent,     ref, alt, ref, alt)]
+merged[, beta_UKB_aligned    := beta_UKB_percent]
+merged[, se_UKB_aligned      := se_UKB_percent]
+merged[, se_Uganda_aligned   := se_Uganda_percent]
+merged[, se_AA_aligned       := se_AA_percent]
+
+# -----------------------------
+# 6. Restrict to autosomes
+# -----------------------------
+merged <- merged[chr %in% as.character(1:22)]
+
+# -----------------------------
+# 7. Compute fixed-effect meta-analysis and heterogeneity
+# -----------------------------
+compute_meta <- function(betas, ses) {
+  valid <- !is.na(betas) & !is.na(ses)
+  betas <- betas[valid]
+  ses   <- ses[valid]
+  k <- length(betas)
+  if(k < 2) return(list(beta_meta=NA, se_meta=NA, Q=NA, I2=NA))
+  
+  w <- 1 / (ses^2)
+  beta_meta <- sum(w * betas) / sum(w)
+  se_meta   <- sqrt(1 / sum(w))
+  Q         <- sum(w * (betas - beta_meta)^2)
+  I2        <- if(Q > (k-1)) (Q - (k-1))/Q * 100 else 0
+  return(list(beta_meta=beta_meta, se_meta=se_meta, Q=Q, I2=I2))
+}
+
+# Apply row-wise
+merged[, c("beta_meta","se_meta","Q","I2") := {
+  res <- mapply(
+    FUN = function(b1,s1,b2,s2,b3,s3) {
+      compute_meta(betas=c(b1,b2,b3), ses=c(s1,s2,s3))
+    },
+    beta_UKB_aligned, se_UKB_aligned,
+    beta_Uganda_aligned, se_Uganda_aligned,
+    beta_AA_aligned, se_AA_aligned,
+    SIMPLIFY = FALSE
+  )
+  beta_meta <- sapply(res, `[[`, "beta_meta")
+  se_meta   <- sapply(res, `[[`, "se_meta")
+  Q         <- sapply(res, `[[`, "Q")
+  I2        <- sapply(res, `[[`, "I2")
+  list(beta_meta, se_meta, Q, I2)
+}]
+
+# -----------------------------
+# 8. Compute Q p-values and Bonferroni threshold
+# -----------------------------
+merged[, n_studies := rowSums(!is.na(.SD)), .SDcols = c("beta_UKB_aligned","beta_Uganda_aligned","beta_AA_aligned")]
+merged[, Q_pval := ifelse(n_studies >= 2, 1 - pchisq(Q, df = n_studies - 1), NA)]
+
+n_tests <- sum(!is.na(merged$Q_pval))
+alpha_bonf <- 0.05 / n_tests
+
+# Flag SNPs that are Bonferroni-significant for heterogeneity
+merged[, hetero_bonf := Q_pval < alpha_bonf]
+
+# -----------------------------
+# 9. Save final processed table
+# -----------------------------
+fwrite(merged, file.path(processed_dir, "merged_HbA1c_GWAS_autosomes.csv"))
+
+# -----------------------------
+# 10. Summary counts
+# -----------------------------
+num_hetero_bonf <- sum(merged$hetero_bonf, na.rm = TRUE)
+cat("Number of autosomal SNPs significantly heterogeneous after Bonferroni correction:", num_hetero_bonf, "\n")

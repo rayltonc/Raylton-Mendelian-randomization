@@ -1,0 +1,51 @@
+setwd("~/genetic")
+library(dplyr)
+
+combined_data <- read.table("combined_data.txt", header = TRUE, sep = "\t", stringsAsFactors = FALSE)
+
+#Remove missing values
+combined_data <- combined_data %>%
+  filter(!is.na(glucose_qc))
+
+mean(combined_data$glucose_qc, na.rm = TRUE)
+
+# Load the required package
+library(MASS)
+library(e1071)
+
+# Inverse of glucose (1 / glucose_qc)
+combined_data$inv_glucose_qc <- 1 / combined_data$glucose_qc
+
+skewness(combined_data$ inv_glucose_qc, na.rm = TRUE)
+
+combined_data$site <- factor(combined_data$site)           
+combined_data$site <- relevel(combined_data$site, ref = "4")
+
+model_site <- lm(
+  inv_glucose_qc ~ Total_PRS + age_c + sex + site + V3 + V4 + V5 + V6 + V7,
+  data = combined_data
+)
+summary(model_site)
+
+
+# Reference predicted glucose
+G_ref <- 1 / coef(model_site)["(Intercept)"]
+
+# Function to transform coefficient
+transform_glucose <- function(beta, se, G_ref) {
+  est <- - beta * G_ref^2
+  se_tr <- se * G_ref^2
+  ci_low <- est - 1.96 * se_tr
+  ci_high <- est + 1.96 * se_tr
+  return(c(Estimate = est, SE = se_tr, CI_Lower = ci_low, CI_Upper = ci_high))
+}
+
+# Apply to all coefficients
+coef_table <- as.data.frame(cbind(
+  Estimate = coef(model_site),
+  SE = summary(model_site)$coefficients[, "Std. Error"]
+))
+
+glucose_table <- t(apply(coef_table, 1, function(x) transform_glucose(x[1], x[2], G_ref)))
+glucose_table <- as.data.frame(glucose_table)
+glucose_table
